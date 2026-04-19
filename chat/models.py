@@ -7,5 +7,15 @@ class Message(models.Model):
     encrypted_text = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{self.sender} → {self.recipient}"
+class Signal(models.Model):
+    call_id = models.CharField(max_length=200)
+    type = models.CharField(max_length=50)
+    data = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class CallInvite(models.Model):
+    recipient_id = models.IntegerField()
+    call_id = models.CharField(max_length=200)
+    caller_id = models.IntegerField()
+    is_video = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
