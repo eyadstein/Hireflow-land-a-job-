@@ -2,6 +2,7 @@ import requests
 import os
 from django.conf import settings
 from datetime import datetime, timezone
+from .filters import detect_experience_level, detect_job_type, filter_jobs
 
 # ── Arab countries config ─────────────────────────────────────
 ARAB_COUNTRIES = {
@@ -177,12 +178,11 @@ def fetch_themuse(query, page=1):
         return []
 
 # ── Main aggregator ───────────────────────────────────────────
-def aggregate_jobs(query, country='uae', include_remote=True, page=1):
+def aggregate_jobs(query, country='uae', include_remote=True, page=1, filters=None):
     country_config = ARAB_COUNTRIES.get(country.lower(), ARAB_COUNTRIES['uae'])
-    
+
     all_jobs = []
 
-    # Fetch from all sources in parallel using threads
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=4) as executor:
         jsearch_future = executor.submit(fetch_jsearch, query, country_config['jsearch'], page)
@@ -197,7 +197,9 @@ def aggregate_jobs(query, country='uae', include_remote=True, page=1):
         all_jobs.extend(themuse_future.result())
 
     # Remove expired jobs
+    from datetime import datetime, timezone
     now = datetime.now(timezone.utc)
+
     def is_valid(job):
         expires = job.get('expires_at')
         if not expires:
@@ -210,7 +212,22 @@ def aggregate_jobs(query, country='uae', include_remote=True, page=1):
 
     all_jobs = [j for j in all_jobs if is_valid(j)]
 
-    # Remove duplicates by title + company
+    # Add experience level and job type detection to each job
+    for job in all_jobs:
+        job['experience_level'] = detect_experience_level(
+            job.get('title', ''),
+            job.get('description', '')
+        )
+        job['job_type_detected'] = detect_job_type(
+            job.get('title', ''),
+            job.get('description', '')
+        )
+
+    # Apply filters
+    if filters:
+        all_jobs = filter_jobs(all_jobs, filters)
+
+    # Remove duplicates
     seen = set()
     unique_jobs = []
     for job in all_jobs:
@@ -219,12 +236,7 @@ def aggregate_jobs(query, country='uae', include_remote=True, page=1):
             seen.add(key)
             unique_jobs.append(job)
 
-    # Sort by posted date (newest first)
-    def sort_key(job):
-        posted = job.get('posted_at')
-        if not posted:
-            return ''
-        return posted
-    
-    unique_jobs.sort(key=sort_key, reverse=True)
+    # Sort by posted date
+    unique_jobs.sort(key=lambda j: j.get('posted_at') or '', reverse=True)
+
     return unique_jobs
