@@ -1,0 +1,100 @@
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import permissions
+from .services import aggregate_jobs, ARAB_COUNTRIES
+
+class JobAggregatorView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        query = request.query_params.get('q', 'software developer')
+        country = request.query_params.get('country', 'uae')
+        include_remote = request.query_params.get('remote', 'true') == 'true'
+        page = int(request.query_params.get('page', 1))
+
+        # Collect filters
+        filters = {
+            'level': request.query_params.get('level'),           # student|graduate|junior|mid|senior|executive
+            'job_type': request.query_params.get('job_type'),     # internship|part_time|remote|freelance|full_time
+            'salary_min': request.query_params.get('salary_min'),
+            'salary_max': request.query_params.get('salary_max'),
+            'remote_only': request.query_params.get('remote_only'),
+        }
+
+        jobs = aggregate_jobs(query, country, include_remote, page, filters)
+
+        # Count by level for frontend filters UI
+        level_counts = {}
+        for job in jobs:
+            lvl = job.get('experience_level', 'unknown')
+            level_counts[lvl] = level_counts.get(lvl, 0) + 1
+
+        # Count by job type
+        type_counts = {}
+        for job in jobs:
+            jt = job.get('job_type_detected', 'unknown')
+            type_counts[jt] = type_counts.get(jt, 0) + 1
+
+        return Response({
+            'count': len(jobs),
+            'country': country,
+            'query': query,
+            'filters_applied': {k: v for k, v in filters.items() if v},
+            'level_counts': level_counts,
+            'type_counts': type_counts,
+            'jobs': jobs,
+        })
+
+
+class CountriesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            'countries': [
+                {'key': k, 'name': v['name']}
+                for k, v in ARAB_COUNTRIES.items()
+            ],
+            'levels': [
+                {'key': 'student', 'label': '🎓 Student / Intern'},
+                {'key': 'graduate', 'label': '🎓 Fresh Graduate'},
+                {'key': 'junior', 'label': '👨‍💻 Junior (1-3 yrs)'},
+                {'key': 'mid', 'label': '💼 Mid Level (3-5 yrs)'},
+                {'key': 'senior', 'label': '🚀 Senior (5+ yrs)'},
+                {'key': 'executive', 'label': '👔 Executive / Manager'},
+            ],
+            'job_types': [
+                {'key': 'full_time', 'label': '⏰ Full Time'},
+                {'key': 'part_time', 'label': '🕐 Part Time'},
+                {'key': 'internship', 'label': '🎓 Internship'},
+                {'key': 'remote', 'label': '🌍 Remote'},
+                {'key': 'freelance', 'label': '💻 Freelance'},
+            ],
+        })
+
+
+class JobLevelsStatsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Return job counts per level for a given query and country."""
+        query = request.query_params.get('q', 'developer')
+        country = request.query_params.get('country', 'uae')
+
+        all_jobs = aggregate_jobs(query, country, True, 1, None)
+
+        stats = {
+            'student': 0, 'graduate': 0, 'junior': 0,
+            'mid': 0, 'senior': 0, 'executive': 0
+        }
+        for job in all_jobs:
+            level = job.get('experience_level', 'mid')
+            if level in stats:
+                stats[level] += 1
+
+        return Response({
+            'query': query,
+            'country': country,
+            'total': len(all_jobs),
+            'by_level': stats,
+        })
