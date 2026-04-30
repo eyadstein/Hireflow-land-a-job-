@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions
 from .services import aggregate_jobs, ARAB_COUNTRIES
+from .matcher import rank_jobs_by_match, calculate_match_score
 
 class JobAggregatorView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -98,3 +99,42 @@ class JobLevelsStatsView(APIView):
             'total': len(all_jobs),
             'by_level': stats,
         })
+
+class JobMatchView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Search jobs and rank by match score using user profile."""
+        query = request.query_params.get('q', 'developer')
+        country = request.query_params.get('country', 'uae')
+        page = int(request.query_params.get('page', 1))
+
+        # Get user profile from DB
+        user = request.user
+        user_profile = {
+            'skills': user.skills if hasattr(user, 'skills') else [],
+            'experience_level': user.experience_level if hasattr(user, 'experience_level') else 'mid',
+            'desired_roles': user.desired_roles if hasattr(user, 'desired_roles') else [],
+            'preferred_countries': user.preferred_countries if hasattr(user, 'preferred_countries') else [],
+            'prefers_remote': user.prefers_remote if hasattr(user, 'prefers_remote') else False,
+        }
+
+        jobs = aggregate_jobs(query, country, True, page, None)
+        ranked_jobs = rank_jobs_by_match(jobs, user_profile)
+
+        return Response({
+            'count': len(ranked_jobs),
+            'user_profile': user_profile,
+            'jobs': ranked_jobs,
+        })
+
+    def post(self, request):
+        """Calculate match score for a specific job with custom profile."""
+        job = request.data.get('job', {})
+        user_profile = request.data.get('profile', {})
+
+        if not job:
+            return Response({'error': 'job is required'}, status=400)
+
+        match = calculate_match_score(job, user_profile)
+        return Response(match)

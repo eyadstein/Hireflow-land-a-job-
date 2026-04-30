@@ -1,10 +1,13 @@
-from django.urls import path
-from .views import AgentChatView, ResumeAnalyzerView, CoverLetterView, SalaryEstimatorView, InterviewCoachView
+from django.contrib import admin
+from django.urls import path, include
 
 urlpatterns = [
-    path('resume/', ResumeAnalyzerView.as_view()),
-    path('cover-letter/', CoverLetterView.as_view()),
-    path('salary/', SalaryEstimatorView.as_view()),
-    path('interview/', InterviewCoachView.as_view()),
-    path('chat/', AgentChatView.as_view()),
+    path('admin/', admin.site.urls),
+    # Your existing URLs
+    path('api/applications/', include('applications.urls')),
+    path('api/chat/', include('chat.urls')),
+    path('api/jobs/', include('jobs.urls')),
+    path('api/users/', include('users.urls')),
+    path('api/jobs-aggregator/', include('jobs_aggregator.urls')),
+    path('api/ai/', include('ai_features.urls')),
 ]
