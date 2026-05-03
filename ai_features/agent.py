@@ -1,9 +1,9 @@
 import os
 import json
-import google.generativeai as genai
+from google import genai
 
 GEMINI_KEY = os.environ.get('GEMINI_KEY', 'YOUR_KEY_HERE')
-genai.configure(api_key=GEMINI_KEY)
+client = genai.Client(api_key=GEMINI_KEY)
 
 # Define tools the agent can use
 tools = [
@@ -95,7 +95,7 @@ def execute_tool(tool_name, params):
 Resume: {params.get('resume_text', '')}
 {f"Job Description: {params.get('job_description', '')}" if params.get('job_description') else ''}
 Return ONLY JSON."""
-        result = model.generate_content(prompt).text
+        result = client.models.generate_content(model='gemini-2.0-flash', contents=prompt).text
         try:
             return json.loads(result.replace('```json','').replace('```','').strip())
         except:
@@ -106,7 +106,7 @@ Return ONLY JSON."""
 Skills: {params.get('skills', 'Not specified')}
 Job Description: {params.get('job_description', 'Not specified')}
 Write 3-4 paragraphs. Professional tone. Return ONLY the letter."""
-        return {"cover_letter": model.generate_content(prompt).text}
+        return {"cover_letter": client.models.generate_content(model='gemini-2.0-flash', contents=prompt).text}
 
     elif tool_name == "estimate_salary":
         prompt = f"""Estimate salary for {params.get('role')} in {params.get('country')} with {params.get('experience_years', 0)} years experience.
@@ -122,7 +122,7 @@ Return ONLY JSON:
   "topSkills": ["<s1>", "<s2>", "<s3>"],
   "insight": "<market insight>"
 }}"""
-        result = model.generate_content(prompt).text
+        result = client.models.generate_content(model='gemini-2.0-flash', contents=prompt).text
         try:
             return json.loads(result.replace('```json','').replace('```','').strip())
         except:
@@ -136,7 +136,7 @@ Return ONLY JSON:
   "behavioral": [{{"question": "<q>", "answer": "<a>"}}],
   "tips": ["<tip1>", "<tip2>", "<tip3>"]
 }}"""
-        result = model.generate_content(prompt).text
+        result = client.models.generate_content(model='gemini-2.0-flash', contents=prompt).text
         try:
             return json.loads(result.replace('```json','').replace('```','').strip())
         except:
@@ -147,8 +147,7 @@ Return ONLY JSON:
 User background: {params.get('user_background', 'Not specified')}
 Question: {params.get('question')}
 Give detailed, actionable career advice. Be specific and encouraging."""
-        return {"advice": model.generate_content(prompt).text}
-
+        return {"advice": client.models.generate_content(model='gemini-2.0-flash', contents=prompt).text}
     return {"error": f"Unknown tool: {tool_name}"}
 
 
