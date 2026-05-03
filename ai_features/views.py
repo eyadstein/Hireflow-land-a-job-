@@ -5,15 +5,21 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions
 from .agent import HireBotAgent
+from .models import CareerRoadmap
 
 GEMINI_KEY = os.environ.get('GEMINI_KEY', 'YOUR_GEMINI_KEY_HERE')
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
+
 def ask_gemini(prompt):
     response = model.generate_content(prompt)
     return response.text
 
+
+# ─────────────────────────────────────────────
+#  Existing Views (unchanged)
+# ─────────────────────────────────────────────
 class ResumeAnalyzerView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -166,10 +172,10 @@ Return ONLY the JSON, no markdown.
             return Response(json.loads(clean))
         except Exception as e:
             return Response({'error': str(e)}, status=500)
-        
 
-# Store agent sessions in memory (per user)
+
 agent_sessions = {}
+
 
 class AgentChatView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -183,7 +189,6 @@ class AgentChatView(APIView):
         if not message:
             return Response({'error': 'message is required'}, status=400)
 
-        # Get or create agent session for this user
         if reset or user_id not in agent_sessions:
             agent_sessions[user_id] = HireBotAgent()
 
@@ -194,3 +199,145 @@ class AgentChatView(APIView):
             return Response(result)
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
+
+# ─────────────────────────────────────────────
+#  NEW — Career Roadmap Generation
+# ─────────────────────────────────────────────
+class CareerRoadmapView(APIView):
+    """
+    POST /api/ai/career-roadmap/   → generate + save a new roadmap
+    GET  /api/ai/career-roadmap/   → list user's saved roadmaps
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        roadmaps = CareerRoadmap.objects.filter(user=request.user)
+        data = [
+            {
+                'id':           r.id,
+                'current_role': r.current_role,
+                'target_role':  r.target_role,
+                'experience':   r.experience,
+                'skills':       r.skills,
+                'roadmap':      r.roadmap,
+                'created_at':   r.created_at.strftime('%Y-%m-%d'),
+            }
+            for r in roadmaps
+        ]
+        return Response(data)
+
+    def post(self, request):
+        current_role = request.data.get('current_role', '')
+        target_role  = request.data.get('target_role', '')
+        experience   = request.data.get('experience', '')
+        skills       = request.data.get('skills', '')
+
+        if not all([current_role, target_role]):
+            return Response(
+                {'error': 'current_role and target_role are required'},
+                status=400
+            )
+
+        prompt = f"""
+You are an expert career coach specializing in the Arab world tech job market.
+Create a detailed, personalized career roadmap for:
+- Current Role: {current_role}
+- Target Role: {target_role}
+- Experience Level: {experience or 'Not specified'}
+- Current Skills: {skills or 'Not specified'}
+
+Return ONLY a JSON object with this exact structure:
+{{
+  "timeline": "<total estimated timeline e.g. 6-9 months>",
+  "overview": "<2-3 sentence summary of the journey>",
+  "phases": [
+    {{
+      "phase": 1,
+      "title": "<phase title>",
+      "duration": "<e.g. 2 months>",
+      "skills": ["<skill1>", "<skill2>", "<skill3>"],
+      "resources": ["<resource1>", "<resource2>"],
+      "milestone": "<what they should be able to do by end of phase>"
+    }},
+    {{
+      "phase": 2,
+      "title": "<phase title>",
+      "duration": "<e.g. 2 months>",
+      "skills": ["<skill1>", "<skill2>", "<skill3>"],
+      "resources": ["<resource1>", "<resource2>"],
+      "milestone": "<milestone>"
+    }},
+    {{
+      "phase": 3,
+      "title": "<phase title>",
+      "duration": "<e.g. 2 months>",
+      "skills": ["<skill1>", "<skill2>", "<skill3>"],
+      "resources": ["<resource1>", "<resource2>"],
+      "milestone": "<milestone>"
+    }}
+  ],
+  "tips": ["<actionable tip1>", "<actionable tip2>", "<actionable tip3>"],
+  "marketInsight": "<1-2 sentences about demand for target role in Arab market>"
+}}
+Return ONLY the JSON, no markdown.
+"""
+        try:
+            result = ask_gemini(prompt)
+            clean  = result.replace('```json', '').replace('```', '').strip()
+            roadmap_data = json.loads(clean)
+
+            # Save to DB
+            saved = CareerRoadmap.objects.create(
+                user=request.user,
+                current_role=current_role,
+                target_role=target_role,
+                experience=experience,
+                skills=skills,
+                roadmap=roadmap_data,
+            )
+
+            return Response({
+                'id':           saved.id,
+                'current_role': saved.current_role,
+                'target_role':  saved.target_role,
+                'experience':   saved.experience,
+                'skills':       saved.skills,
+                'roadmap':      roadmap_data,
+                'created_at':   saved.created_at.strftime('%Y-%m-%d'),
+            }, status=201)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+class CareerRoadmapDetailView(APIView):
+    """
+    GET    /api/ai/career-roadmap/<id>/  → retrieve specific roadmap
+    DELETE /api/ai/career-roadmap/<id>/  → delete a roadmap
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            r = CareerRoadmap.objects.get(pk=pk, user=request.user)
+        except CareerRoadmap.DoesNotExist:
+            return Response({'error': 'Roadmap not found'}, status=404)
+
+        return Response({
+            'id':           r.id,
+            'current_role': r.current_role,
+            'target_role':  r.target_role,
+            'experience':   r.experience,
+            'skills':       r.skills,
+            'roadmap':      r.roadmap,
+            'created_at':   r.created_at.strftime('%Y-%m-%d'),
+        })
+
+    def delete(self, request, pk):
+        try:
+            r = CareerRoadmap.objects.get(pk=pk, user=request.user)
+            r.delete()
+            return Response({'detail': 'Roadmap deleted'}, status=204)
+        except CareerRoadmap.DoesNotExist:
+            return Response({'error': 'Roadmap not found'}, status=404)
