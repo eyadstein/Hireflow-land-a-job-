@@ -1,2 +1,5 @@
 __pycache__/
 .env
+private key
+private key.pub
+
