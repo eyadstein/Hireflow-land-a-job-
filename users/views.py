@@ -15,6 +15,17 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+
+        # Handle referral code if provided
+        referral_code = request.data.get('referral_code')
+        if referral_code:
+            from referrals.services import process_referral
+            process_referral(user, referral_code)
+
+        # Auto-create referral code for new user
+        from referrals.services import get_or_create_referral_code
+        get_or_create_referral_code(user)
+
         refresh = RefreshToken.for_user(user)
         return Response({
             'user': UserSerializer(user).data,

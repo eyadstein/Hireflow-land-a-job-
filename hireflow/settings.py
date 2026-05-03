@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'chat',
     'jobs_aggregator',
     'ai_features',
+    'referrals',
 ]
 
 MIDDLEWARE = [
