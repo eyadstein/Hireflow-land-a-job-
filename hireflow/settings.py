@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'chat',
     'jobs_aggregator',
     'ai_features',
+    'plans',
 ]
 
 MIDDLEWARE = [
@@ -38,6 +39,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'plans.middleware.PlanLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'hireflow.urls'
