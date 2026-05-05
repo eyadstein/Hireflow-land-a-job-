@@ -1,5 +1,16 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
+from django.utils import timezone
+
+
+def health_check(request):
+    return JsonResponse({
+        'status':    'healthy',
+        'timestamp': timezone.now().isoformat(),
+        'service':   'hireflow-backend',
+    })
+
 
 urlpatterns = [
     path('admin/',               admin.site.urls),
@@ -9,4 +20,5 @@ urlpatterns = [
     path('api/chat/',            include('chat.urls')),
     path('api/ai/',              include('ai_features.urls')),
     path('api/jobs-aggregator/', include('jobs_aggregator.urls')),
+    path('health/',              health_check),
 ]

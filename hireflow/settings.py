@@ -4,11 +4,10 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-hireflow-change-this-in-production'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-hireflow-change-this-in-production')
+DEBUG      = os.environ.get('DEBUG', 'True') == 'True'
 
-DEBUG = True
-
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -40,7 +39,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'hireflow.urls'
+ROOT_URLCONF      = 'hireflow.urls'
+WSGI_APPLICATION  = 'hireflow.wsgi.application'
+ASGI_APPLICATION  = 'hireflow.asgi.application'
 
 TEMPLATES = [
     {
@@ -58,22 +59,17 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'hireflow.wsgi.application'
-ASGI_APPLICATION = 'hireflow.asgi.application'
-
-# PostgreSQL Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'hireflow'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
+        'ENGINE':   'django.db.backends.postgresql',
+        'NAME':     os.environ.get('DB_NAME',     'hireflow'),
+        'USER':     os.environ.get('DB_USER',     'postgres'),
         'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'HOST':     os.environ.get('DB_HOST',     'localhost'),
+        'PORT':     os.environ.get('DB_PORT',     '5432'),
     }
 }
 
-# JWT Auth
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -84,25 +80,35 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME':  timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
-# CORS - allow React frontend
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Channels
-CHANNEL_LAYERS = {
+InMemoryChannelLayer = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [os.environ.get('REDIS_URL', 'redis://localhost:6379/0')],
+        },
     },
 }
 
-AUTH_USER_MODEL = 'users.User'
-
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
-USE_I18N = True
-USE_TZ = True
-STATIC_URL = 'static/'
+AUTH_USER_MODEL  = 'users.User'
+LANGUAGE_CODE    = 'en-us'
+TIME_ZONE        = 'UTC'
+USE_I18N         = True
+USE_TZ           = True
+STATIC_URL       = 'static/'
+STATIC_ROOT      = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Security headers for production
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER        = True
+    SECURE_CONTENT_TYPE_NOSNIFF      = True
+    X_FRAME_OPTIONS                  = 'DENY'
+    SECURE_HSTS_SECONDS              = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS   = True
+    SECURE_HSTS_PRELOAD              = True
