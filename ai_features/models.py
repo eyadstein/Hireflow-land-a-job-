@@ -110,3 +110,30 @@ class LinkedInOptimization(models.Model):
 
     def __str__(self):
         return f"{self.user.username} — LinkedIn optimization ({self.profile_score}/100)"
+
+
+class CareerIntelligenceReport(models.Model):
+
+    REPORT_TYPES = [
+        ('career_path',  'Career Path Predictor'),
+        ('skill_gap',    'Skill Gap Analyzer'),
+        ('market_trends','Market Trends'),
+        ('resume_gap',   'Resume vs Job Gap'),
+        ('competitor',   'Competitor Analysis'),
+    ]
+
+    user        = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='intelligence_reports'
+    )
+    report_type = models.CharField(max_length=20, choices=REPORT_TYPES)
+    input_data  = models.JSONField(default=dict)
+    report      = models.JSONField()
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} — {self.report_type} ({self.created_at.strftime('%Y-%m-%d')})"

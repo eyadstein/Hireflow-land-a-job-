@@ -11,6 +11,7 @@ from .models import (
     CareerRoadmap, CVProfile,
     MockInterviewSession, MockInterviewAnswer,
     LinkedInOptimization,
+    CareerIntelligenceReport,
 )
 
 GEMINI_KEY = os.environ.get('GEMINI_KEY', 'YOUR_GEMINI_KEY_HERE')
@@ -774,3 +775,378 @@ class LinkedInOptimizerDetailView(APIView):
             'optimized':     o.optimized,
             'created_at':    o.created_at.strftime('%Y-%m-%d'),
         })
+
+class CareerPathPredictorView(APIView):
+    """
+    POST /api/ai/intelligence/career-path/
+    Body: { "current_role": "...", "skills": [...], "experience_years": 3, "goals": "..." }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        current_role     = request.data.get('current_role', '')
+        skills           = request.data.get('skills', [])
+        experience_years = request.data.get('experience_years', 0)
+        goals            = request.data.get('goals', '')
+
+        if not current_role:
+            return Response({'error': 'current_role is required'}, status=400)
+
+        prompt = f"""
+You are an expert career strategist specializing in the Arab world tech job market.
+Predict the career path for this professional over the next 5 years:
+- Current Role: {current_role}
+- Skills: {', '.join(skills) if skills else 'Not specified'}
+- Years of Experience: {experience_years}
+- Career Goals: {goals or 'Not specified'}
+
+Return ONLY a JSON object:
+{{
+  "summary": "<2-3 sentence overview of their career trajectory>",
+  "year_by_year": [
+    {{"year": 1, "predicted_role": "<role>", "expected_salary_usd": <number>, "key_milestones": ["<m1>", "<m2>"]}},
+    {{"year": 2, "predicted_role": "<role>", "expected_salary_usd": <number>, "key_milestones": ["<m1>", "<m2>"]}},
+    {{"year": 3, "predicted_role": "<role>", "expected_salary_usd": <number>, "key_milestones": ["<m1>", "<m2>"]}},
+    {{"year": 4, "predicted_role": "<role>", "expected_salary_usd": <number>, "key_milestones": ["<m1>", "<m2>"]}},
+    {{"year": 5, "predicted_role": "<role>", "expected_salary_usd": <number>, "key_milestones": ["<m1>", "<m2>"]}}
+  ],
+  "alternative_paths": [
+    {{"path": "<alternative career path>", "reason": "<why this fits them>"}},
+    {{"path": "<alternative career path>", "reason": "<why this fits them>"}}
+  ],
+  "key_skills_to_develop": ["<skill1>", "<skill2>", "<skill3>"],
+  "biggest_opportunities": ["<opportunity1>", "<opportunity2>"],
+  "risks_to_watch": ["<risk1>", "<risk2>"],
+  "marketInsight": "<Arab market specific insight>"
+}}
+Return ONLY the JSON, no markdown.
+"""
+        try:
+            result = ask_gemini(prompt)
+            clean  = result.replace('```json', '').replace('```', '').strip()
+            data   = json.loads(clean)
+
+            report = CareerIntelligenceReport.objects.create(
+                user        = request.user,
+                report_type = 'career_path',
+                input_data  = {
+                    'current_role':     current_role,
+                    'skills':           skills,
+                    'experience_years': experience_years,
+                    'goals':            goals,
+                },
+                report = data,
+            )
+
+            return Response({
+                'id':         report.id,
+                'report_type': 'career_path',
+                'report':     data,
+                'created_at': report.created_at.strftime('%Y-%m-%d'),
+            }, status=201)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+class SkillGapAnalyzerView(APIView):
+    """
+    POST /api/ai/intelligence/skill-gap/
+    Body: { "current_skills": [...], "dream_job": "...", "experience_years": 3 }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        current_skills   = request.data.get('current_skills', [])
+        dream_job        = request.data.get('dream_job', '')
+        experience_years = request.data.get('experience_years', 0)
+
+        if not dream_job:
+            return Response({'error': 'dream_job is required'}, status=400)
+
+        prompt = f"""
+You are an expert skills analyst for the Arab world tech job market.
+Analyze the skill gap between this candidate and their dream job:
+- Current Skills: {', '.join(current_skills) if current_skills else 'None specified'}
+- Dream Job: {dream_job}
+- Years of Experience: {experience_years}
+
+Return ONLY a JSON object:
+{{
+  "readiness_score": <0-100>,
+  "summary": "<2-3 sentence gap assessment>",
+  "skills_you_have": ["<skill1>", "<skill2>"],
+  "critical_missing_skills": [
+    {{"skill": "<skill>", "importance": "Critical", "time_to_learn": "<e.g. 3 months>", "resource": "<best resource>"}},
+    {{"skill": "<skill>", "importance": "Critical", "time_to_learn": "<e.g. 2 months>", "resource": "<best resource>"}}
+  ],
+  "nice_to_have_skills": [
+    {{"skill": "<skill>", "importance": "Nice to have", "time_to_learn": "<e.g. 1 month>", "resource": "<best resource>"}}
+  ],
+  "estimated_time_to_ready": "<e.g. 6-9 months>",
+  "learning_path": [
+    {{"step": 1, "focus": "<what to learn first>", "duration": "<e.g. 2 months>"}},
+    {{"step": 2, "focus": "<what to learn next>", "duration": "<e.g. 2 months>"}},
+    {{"step": 3, "focus": "<what to learn last>", "duration": "<e.g. 3 months>"}}
+  ],
+  "certifications": ["<cert1>", "<cert2>"],
+  "marketInsight": "<demand for this role in Arab market>"
+}}
+Return ONLY the JSON, no markdown.
+"""
+        try:
+            result = ask_gemini(prompt)
+            clean  = result.replace('```json', '').replace('```', '').strip()
+            data   = json.loads(clean)
+
+            report = CareerIntelligenceReport.objects.create(
+                user        = request.user,
+                report_type = 'skill_gap',
+                input_data  = {
+                    'current_skills':   current_skills,
+                    'dream_job':        dream_job,
+                    'experience_years': experience_years,
+                },
+                report = data,
+            )
+
+            return Response({
+                'id':          report.id,
+                'report_type': 'skill_gap',
+                'report':      data,
+                'created_at':  report.created_at.strftime('%Y-%m-%d'),
+            }, status=201)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+class MarketTrendsView(APIView):
+    """
+    POST /api/ai/intelligence/market-trends/
+    Body: { "country": "Egypt", "field": "Backend Development" }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        country = request.data.get('country', 'Egypt')
+        field   = request.data.get('field', '')
+
+        if not field:
+            return Response({'error': 'field is required'}, status=400)
+
+        prompt = f"""
+You are an expert job market analyst specializing in the Arab world tech industry.
+Analyze current job market trends for:
+- Country: {country}
+- Field: {field}
+
+Return ONLY a JSON object:
+{{
+  "summary": "<2-3 sentence market overview>",
+  "demand_level": "<Very High|High|Medium|Low>",
+  "avg_salary_usd": <number per month>,
+  "salary_range": {{"min": <number>, "max": <number>}},
+  "hottest_skills": ["<skill1>", "<skill2>", "<skill3>", "<skill4>", "<skill5>"],
+  "declining_skills": ["<skill1>", "<skill2>"],
+  "top_hiring_companies": ["<company1>", "<company2>", "<company3>"],
+  "job_openings_trend": "<Growing|Stable|Declining>",
+  "remote_work_availability": "<High|Medium|Low>",
+  "emerging_roles": ["<role1>", "<role2>", "<role3>"],
+  "tips": ["<tip1>", "<tip2>", "<tip3>"],
+  "6_month_outlook": "<what to expect in the next 6 months>"
+}}
+Return ONLY the JSON, no markdown.
+"""
+        try:
+            result = ask_gemini(prompt)
+            clean  = result.replace('```json', '').replace('```', '').strip()
+            data   = json.loads(clean)
+
+            report = CareerIntelligenceReport.objects.create(
+                user        = request.user,
+                report_type = 'market_trends',
+                input_data  = {'country': country, 'field': field},
+                report      = data,
+            )
+
+            return Response({
+                'id':          report.id,
+                'report_type': 'market_trends',
+                'country':     country,
+                'field':       field,
+                'report':      data,
+                'created_at':  report.created_at.strftime('%Y-%m-%d'),
+            }, status=201)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+class ResumeJobGapView(APIView):
+    """
+    POST /api/ai/intelligence/resume-gap/
+    Body: { "resume_text": "...", "job_description": "..." }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        resume_text     = request.data.get('resume_text', '')
+        job_description = request.data.get('job_description', '')
+
+        if not all([resume_text, job_description]):
+            return Response(
+                {'error': 'resume_text and job_description are required'},
+                status=400
+            )
+
+        prompt = f"""
+You are an expert ATS analyst and career coach.
+Analyze the gap between this resume and job description:
+
+Resume:
+{resume_text}
+
+Job Description:
+{job_description}
+
+Return ONLY a JSON object:
+{{
+  "match_score": <0-100>,
+  "summary": "<2-3 sentence fit assessment>",
+  "strengths": ["<what matches well1>", "<what matches well2>", "<what matches well3>"],
+  "critical_gaps": [
+    {{"gap": "<missing requirement>", "how_to_fix": "<actionable fix>"}},
+    {{"gap": "<missing requirement>", "how_to_fix": "<actionable fix>"}}
+  ],
+  "missing_keywords": ["<keyword1>", "<keyword2>", "<keyword3>", "<keyword4>"],
+  "resume_improvements": [
+    {{"section": "<e.g. Summary>", "current_issue": "<problem>", "suggested_fix": "<fix>"}},
+    {{"section": "<e.g. Experience>", "current_issue": "<problem>", "suggested_fix": "<fix>"}}
+  ],
+  "should_apply": <true|false>,
+  "application_tips": ["<tip1>", "<tip2>", "<tip3>"]
+}}
+Return ONLY the JSON, no markdown.
+"""
+        try:
+            result = ask_gemini(prompt)
+            clean  = result.replace('```json', '').replace('```', '').strip()
+            data   = json.loads(clean)
+
+            report = CareerIntelligenceReport.objects.create(
+                user        = request.user,
+                report_type = 'resume_gap',
+                input_data  = {
+                    'resume_text':     resume_text[:500],
+                    'job_description': job_description[:500],
+                },
+                report = data,
+            )
+
+            return Response({
+                'id':          report.id,
+                'report_type': 'resume_gap',
+                'report':      data,
+                'created_at':  report.created_at.strftime('%Y-%m-%d'),
+            }, status=201)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+class CompetitorAnalysisView(APIView):
+    """
+    POST /api/ai/intelligence/competitor/
+    Body: { "role": "...", "your_skills": [...], "experience_years": 3, "country": "Egypt" }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        role             = request.data.get('role', '')
+        your_skills      = request.data.get('your_skills', [])
+        experience_years = request.data.get('experience_years', 0)
+        country          = request.data.get('country', 'Egypt')
+
+        if not role:
+            return Response({'error': 'role is required'}, status=400)
+
+        prompt = f"""
+You are an expert talent market analyst for the Arab world.
+Analyze what typical applicants look like for this role and how this candidate compares:
+- Role: {role}
+- Country: {country}
+- Candidate Skills: {', '.join(your_skills) if your_skills else 'Not specified'}
+- Candidate Experience: {experience_years} years
+
+Return ONLY a JSON object:
+{{
+  "competitive_score": <0-100>,
+  "summary": "<2-3 sentence competitive position assessment>",
+  "typical_applicant_profile": {{
+    "avg_experience_years": <number>,
+    "common_skills": ["<skill1>", "<skill2>", "<skill3>", "<skill4>"],
+    "common_education": "<e.g. Bachelor's in CS>",
+    "common_certifications": ["<cert1>", "<cert2>"]
+  }},
+  "your_advantages": ["<advantage1>", "<advantage2>", "<advantage3>"],
+  "your_disadvantages": ["<disadvantage1>", "<disadvantage2>"],
+  "differentiators_to_add": ["<what would make you stand out1>", "<what would make you stand out2>"],
+  "hiring_difficulty": "<Very Competitive|Competitive|Moderate|Easy>",
+  "how_to_stand_out": ["<tip1>", "<tip2>", "<tip3>"],
+  "marketInsight": "<Arab market competitive landscape insight>"
+}}
+Return ONLY the JSON, no markdown.
+"""
+        try:
+            result = ask_gemini(prompt)
+            clean  = result.replace('```json', '').replace('```', '').strip()
+            data   = json.loads(clean)
+
+            report = CareerIntelligenceReport.objects.create(
+                user        = request.user,
+                report_type = 'competitor',
+                input_data  = {
+                    'role':             role,
+                    'your_skills':      your_skills,
+                    'experience_years': experience_years,
+                    'country':          country,
+                },
+                report = data,
+            )
+
+            return Response({
+                'id':          report.id,
+                'report_type': 'competitor',
+                'report':      data,
+                'created_at':  report.created_at.strftime('%Y-%m-%d'),
+            }, status=201)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+class CareerIntelligenceHistoryView(APIView):
+    """
+    GET /api/ai/intelligence/history/
+    Returns all past intelligence reports for the current user.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        report_type = request.query_params.get('type')
+        reports     = CareerIntelligenceReport.objects.filter(user=request.user)
+
+        if report_type:
+            reports = reports.filter(report_type=report_type)
+
+        return Response([
+            {
+                'id':          r.id,
+                'report_type': r.report_type,
+                'input_data':  r.input_data,
+                'report':      r.report,
+                'created_at':  r.created_at.strftime('%Y-%m-%d'),
+            }
+            for r in reports
+        ])
