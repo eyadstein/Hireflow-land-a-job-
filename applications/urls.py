@@ -9,6 +9,9 @@ from .views import (
     CandidateNotesView,
     NoteDetailView,
     CompareCandidatesView,
+    BulkDecisionView,
+    RejectAllPendingView,
+    AcceptTopCandidatesView,
 )
 
 urlpatterns = [
@@ -25,4 +28,9 @@ urlpatterns = [
 
     # Candidate Comparison Tool
     path('compare/', CompareCandidatesView.as_view()),
+
+    # One Click Decision Actions
+    path('bulk-decision/', BulkDecisionView.as_view()),
+    path('job/<int:job_id>/reject-all-pending/', RejectAllPendingView.as_view()),
+    path('job/<int:job_id>/accept-top/', AcceptTopCandidatesView.as_view()),
 ]
