@@ -16,6 +16,8 @@ from .views import (
     ResponseTimesView,
     RankedCandidatesView,
     StarCandidatesView,
+    JobOptimizeView,
+    OptimizationReportView,
 )
 
 urlpatterns = [
@@ -43,4 +45,8 @@ urlpatterns = [
     # Top Candidate Identification
     path('<int:job_id>/ranked-candidates/', RankedCandidatesView.as_view()),
     path('star-candidates/', StarCandidatesView.as_view()),
+
+    # Job Performance Optimization
+    path('<int:job_id>/optimize/', JobOptimizeView.as_view()),
+    path('optimization-report/', OptimizationReportView.as_view()),
 ]
