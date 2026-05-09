@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { jobs as jobsApi } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, MapPin, Building2, Clock, DollarSign, ExternalLink, Briefcase, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "@/components/shared/PageHeader";
@@ -35,7 +34,7 @@ export default function Jobs() {
 
   const { data: jobs = [], isLoading } = useQuery({
     queryKey: ["jobs"],
-    queryFn: () => base44.entities.Job.list("-created_date"),
+    queryFn: () => jobsApi.list(),
   });
 
   const filtered = jobs.filter((job) => {
@@ -55,7 +54,6 @@ export default function Jobs() {
         description="Browse opportunities and find your perfect role."
       />
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-8">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -80,7 +78,6 @@ export default function Jobs() {
         </Select>
       </div>
 
-      {/* Jobs List */}
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -111,9 +108,9 @@ export default function Jobs() {
                       <h3 className="text-base font-semibold text-foreground truncate">
                         {job.title}
                       </h3>
-                      {job.type && (
+                      {job.job_type && (
                         <Badge variant="secondary" className="text-[11px] font-medium shrink-0">
-                          {typeLabels[job.type] || job.type}
+                          {typeLabels[job.job_type] || job.job_type}
                         </Badge>
                       )}
                     </div>

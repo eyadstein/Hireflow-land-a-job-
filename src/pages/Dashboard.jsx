@@ -1,18 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { auth, applications as appsApi, jobs as jobsApi } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
-  Briefcase,
-  FileText,
-  Sparkles,
-  PenLine,
-  Users,
-  DollarSign,
-  MessageSquare,
-  Send,
-  Target,
-  TrendingUp,
+  Briefcase, FileText, Sparkles, PenLine, Users, DollarSign,
+  MessageSquare, Send, Target, TrendingUp,
 } from "lucide-react";
 import MetricCard from "@/components/dashboard/MetricCard";
 import FeatureCard from "@/components/dashboard/FeatureCard";
@@ -31,28 +23,27 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const { data: applications = [] } = useQuery({
+  const { data: appsList = [] } = useQuery({
     queryKey: ["applications"],
-    queryFn: () => base44.entities.Application.list(),
+    queryFn: () => appsApi.list(),
   });
 
   const { data: jobs = [] } = useQuery({
     queryKey: ["jobs"],
-    queryFn: () => base44.entities.Job.list(),
+    queryFn: () => jobsApi.list(),
   });
 
-  const applied = applications.filter((a) => a.status === "applied").length;
-  const interviewing = applications.filter((a) => a.status === "interview").length;
-  const offers = applications.filter((a) => a.status === "offer").length;
+  const applied = appsList.filter((a) => a.status === "applied").length;
+  const interviewing = appsList.filter((a) => a.status === "interview").length;
+  const offers = appsList.filter((a) => a.status === "offer").length;
 
-  const firstName = user?.full_name?.split(" ")[0] || "there";
+  const firstName = user?.username?.split("@")[0] || "there";
 
   return (
     <div className="p-8 lg:p-12 max-w-none">
-      {/* Hero */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -70,9 +61,8 @@ export default function Dashboard() {
         </p>
       </motion.div>
 
-      {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <MetricCard label="Total Applications" value={applications.length} icon={Send} delay={0.05} />
+        <MetricCard label="Total Applications" value={appsList.length} icon={Send} delay={0.05} />
         <MetricCard label="Active Pipeline" value={applied} subtitle="Awaiting response" icon={FileText} delay={0.1} />
         <MetricCard label="Interviews" value={interviewing} subtitle="Scheduled" icon={Users} delay={0.15} />
         <MetricCard label="Offers" value={offers} icon={TrendingUp} delay={0.2} />
@@ -80,7 +70,6 @@ export default function Dashboard() {
 
       <div className="horizon-rule mb-10" />
 
-      {/* Quick Actions */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -98,7 +87,6 @@ export default function Dashboard() {
         </div>
       </motion.div>
 
-      {/* Feature Grid */}
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-4">
           AI-Powered Tools

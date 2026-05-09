@@ -1,5 +1,5 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
+import { applications as appsApi } from "@/api/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { motion } from "framer-motion";
@@ -10,23 +10,23 @@ import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
 
 const columns = [
-  { id: "applied", label: "Applied", accent: "bg-primary" },
+  { id: "applied",   label: "Applied",   accent: "bg-primary" },
   { id: "screening", label: "Screening", accent: "bg-amber-500" },
   { id: "interview", label: "Interview", accent: "bg-violet-500" },
-  { id: "offer", label: "Offer", accent: "bg-emerald-500" },
-  { id: "rejected", label: "Rejected", accent: "bg-red-500" },
+  { id: "offer",     label: "Offer",     accent: "bg-emerald-500" },
+  { id: "rejected",  label: "Rejected",  accent: "bg-red-500" },
 ];
 
 export default function Tracker() {
   const queryClient = useQueryClient();
 
-  const { data: applications = [], isLoading } = useQuery({
+  const { data: appsList = [], isLoading } = useQuery({
     queryKey: ["applications"],
-    queryFn: () => base44.entities.Application.list("-created_date"),
+    queryFn: () => appsApi.list(),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Application.update(id, data),
+    mutationFn: ({ id, data }) => appsApi.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["applications"] }),
   });
 
@@ -34,7 +34,7 @@ export default function Tracker() {
     if (!result.destination) return;
     const { draggableId, destination } = result;
     const newStatus = destination.droppableId;
-    updateMutation.mutate({ id: draggableId, data: { status: newStatus } });
+    updateMutation.mutate({ id: parseInt(draggableId), data: { status: newStatus } });
   };
 
   if (isLoading) {
@@ -50,7 +50,7 @@ export default function Tracker() {
     );
   }
 
-  if (applications.length === 0) {
+  if (appsList.length === 0) {
     return (
       <div className="p-8 lg:p-12">
         <PageHeader eyebrow="Pipeline" title="Application Tracker" description="Visualize your job search pipeline with drag-and-drop cards." />
@@ -74,7 +74,7 @@ export default function Tracker() {
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto">
           {columns.map((col) => {
-            const items = applications.filter((a) => (a.status || "applied") === col.id);
+            const items = appsList.filter((a) => (a.status || "applied") === col.id);
             return (
               <Droppable key={col.id} droppableId={col.id}>
                 {(provided, snapshot) => (
@@ -85,7 +85,6 @@ export default function Tracker() {
                       snapshot.isDraggingOver ? "bg-primary/5" : "bg-secondary/40"
                     }`}
                   >
-                    {/* Column header */}
                     <div className="flex items-center gap-2 mb-3 px-1">
                       <div className={`w-2 h-2 rounded-full ${col.accent}`} />
                       <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -96,10 +95,9 @@ export default function Tracker() {
                       </Badge>
                     </div>
 
-                    {/* Cards */}
                     <div className="space-y-2">
                       {items.map((app, index) => (
-                        <Draggable key={app.id} draggableId={app.id} index={index}>
+                        <Draggable key={app.id} draggableId={String(app.id)} index={index}>
                           {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { auth } from "@/api/client";
 import {
   LayoutDashboard,
   Briefcase,
@@ -14,19 +15,31 @@ import {
   User,
   LogOut,
   Building2,
+  Target,
+  Map,
+  ScanSearch,
 } from "lucide-react";
 
-const baseNavItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Briefcase, label: "Job Board", path: "/jobs" },
-  { icon: FileText, label: "Applications", path: "/applications" },
-  { icon: KanbanSquare, label: "Tracker", path: "/tracker" },
-  { icon: Sparkles, label: "Resume AI", path: "/resume-ai" },
-  { icon: PenLine, label: "Cover Letter", path: "/cover-letter" },
-  { icon: Users, label: "Interview", path: "/interview" },
-  { icon: DollarSign, label: "Salary", path: "/salary" },
-  { icon: MessageSquare, label: "AI Assistant", path: "/chatbot" },
-  { icon: User, label: "Profile", path: "/profile" },
+const jobseekerNavItems = [
+  { icon: LayoutDashboard, label: "Dashboard",    path: "/" },
+  { icon: Briefcase,       label: "Job Board",    path: "/jobs" },
+  { icon: FileText,        label: "Applications", path: "/applications" },
+  { icon: KanbanSquare,    label: "Tracker",      path: "/tracker" },
+  { icon: Sparkles,        label: "Resume AI",    path: "/resume-ai" },
+  { icon: Target,          label: "Skill Gap",    path: "/skill-gap" },
+  { icon: ScanSearch,      label: "ATS Check",    path: "/ats-check" },
+  { icon: PenLine,         label: "Cover Letter", path: "/cover-letter" },
+  { icon: Users,           label: "Interview",    path: "/interview" },
+  { icon: DollarSign,      label: "Salary",       path: "/salary" },
+  { icon: Map,             label: "Career Plan",  path: "/career-roadmap" },
+  { icon: MessageSquare,   label: "AI Assistant", path: "/chatbot" },
+  { icon: User,            label: "Profile",      path: "/profile" },
+];
+
+const recruiterNavItems = [
+  { icon: Building2,       label: "Dashboard",    path: "/recruiter" },
+  { icon: Briefcase,       label: "Job Board",    path: "/jobs" },
+  { icon: User,            label: "Profile",      path: "/profile" },
 ];
 
 export default function AppSidebar() {
@@ -35,17 +48,10 @@ export default function AppSidebar() {
   const navigate = useNavigate();
 
   const role = localStorage.getItem("role");
-
-  const navItems =
-    role === "recruiter"
-      ? [
-          ...baseNavItems,
-          { icon: Building2, label: "Recruiter", path: "/recruiter" },
-        ]
-      : baseNavItems;
+  const navItems = role === "recruiter" ? recruiterNavItems : jobseekerNavItems;
 
   const handleLogout = () => {
-    localStorage.removeItem("role");
+    auth.logout();
     navigate("/login");
   };
 
