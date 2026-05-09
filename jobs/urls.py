@@ -14,6 +14,8 @@ from .views import (
     DecisionPatternsView,
     BusiestPeriodsView,
     ResponseTimesView,
+    RankedCandidatesView,
+    StarCandidatesView,
 )
 
 urlpatterns = [
@@ -37,4 +39,8 @@ urlpatterns = [
     path('performance/decision-patterns/', DecisionPatternsView.as_view()),
     path('performance/busiest-periods/', BusiestPeriodsView.as_view()),
     path('performance/response-times/', ResponseTimesView.as_view()),
+
+    # Top Candidate Identification
+    path('<int:job_id>/ranked-candidates/', RankedCandidatesView.as_view()),
+    path('star-candidates/', StarCandidatesView.as_view()),
 ]
