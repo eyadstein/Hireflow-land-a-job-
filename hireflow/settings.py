@@ -1,6 +1,9 @@
 from pathlib import Path
 from datetime import timedelta
 import os
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / '.env.local')
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -61,17 +64,25 @@ TEMPLATES = [
 WSGI_APPLICATION = 'hireflow.wsgi.application'
 ASGI_APPLICATION = 'hireflow.asgi.application'
 
-# PostgreSQL Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'hireflow'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+# Database — PostgreSQL in production, SQLite for local dev
+if os.environ.get('DB_NAME'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # JWT Auth
 REST_FRAMEWORK = {
@@ -99,6 +110,13 @@ CHANNEL_LAYERS = {
 }
 
 AUTH_USER_MODEL = 'users.User'
+
+# External API keys (set in .env or environment)
+GEMINI_KEY        = os.environ.get('GEMINI_KEY', '')
+JSEARCH_KEY       = os.environ.get('JSEARCH_KEY', '')
+ADZUNA_APP_ID     = os.environ.get('ADZUNA_APP_ID', '')
+ADZUNA_APP_KEY    = os.environ.get('ADZUNA_APP_KEY', '')
+GROQ_API_KEY      = os.environ.get('GROQ_API_KEY', '')
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
