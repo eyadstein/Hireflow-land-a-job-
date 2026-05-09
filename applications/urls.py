@@ -8,6 +8,7 @@ from .views import (
     CandidateTimelineView,
     CandidateNotesView,
     NoteDetailView,
+    CompareCandidatesView,
 )
 
 urlpatterns = [
@@ -21,4 +22,7 @@ urlpatterns = [
     path('candidate/<int:user_id>/timeline/', CandidateTimelineView.as_view()),
     path('candidate/<int:user_id>/notes/', CandidateNotesView.as_view()),
     path('notes/<int:note_id>/', NoteDetailView.as_view()),
+
+    # Candidate Comparison Tool
+    path('compare/', CompareCandidatesView.as_view()),
 ]
