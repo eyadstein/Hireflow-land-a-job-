@@ -18,6 +18,7 @@ from .views import (
     StarCandidatesView,
     JobOptimizeView,
     OptimizationReportView,
+    RiskAlertsView,
 )
 
 urlpatterns = [
@@ -49,4 +50,7 @@ urlpatterns = [
     # Job Performance Optimization
     path('<int:job_id>/optimize/', JobOptimizeView.as_view()),
     path('optimization-report/', OptimizationReportView.as_view()),
+
+    # Risk and Behavior Alerts
+    path('alerts/', RiskAlertsView.as_view()),
 ]
