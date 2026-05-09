@@ -1,4 +1,5 @@
 from rest_framework import generics, permissions
+from django.utils import timezone
 from .models import Application
 from .serializers import ApplicationSerializer
 
@@ -36,7 +37,10 @@ class JobApplicationsView(generics.ListAPIView):
 
 
 class UpdateStatusView(generics.UpdateAPIView):
-    """Only the recruiter who owns the job can accept/reject."""
+    """Recruiter accepts or rejects — stamps reviewed_at timestamp."""
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated, IsJobOwner]
     queryset = Application.objects.all()
+
+    def perform_update(self, serializer):
+        serializer.save(reviewed_at=timezone.now())

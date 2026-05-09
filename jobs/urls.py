@@ -9,6 +9,11 @@ from .views import (
     TopPerformingJobsView,
     StatusBreakdownView,
     HiringVelocityView,
+    PerformanceSummaryView,
+    ActivityLogView,
+    DecisionPatternsView,
+    BusiestPeriodsView,
+    ResponseTimesView,
 )
 
 urlpatterns = [
@@ -25,4 +30,11 @@ urlpatterns = [
     path('analytics/top-jobs/', TopPerformingJobsView.as_view()),
     path('analytics/status-breakdown/', StatusBreakdownView.as_view()),
     path('analytics/hiring-velocity/', HiringVelocityView.as_view()),
+
+    # Recruiter Performance Analytics
+    path('performance/summary/', PerformanceSummaryView.as_view()),
+    path('performance/activity-log/', ActivityLogView.as_view()),
+    path('performance/decision-patterns/', DecisionPatternsView.as_view()),
+    path('performance/busiest-periods/', BusiestPeriodsView.as_view()),
+    path('performance/response-times/', ResponseTimesView.as_view()),
 ]
