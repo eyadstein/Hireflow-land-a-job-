@@ -12,6 +12,8 @@ from .views import (
     BulkDecisionView,
     RejectAllPendingView,
     AcceptTopCandidatesView,
+    ApplicationListCreateView,
+    ApplicationDetailView,
 )
 
 urlpatterns = [
@@ -33,4 +35,8 @@ urlpatterns = [
     path('bulk-decision/', BulkDecisionView.as_view()),
     path('job/<int:job_id>/reject-all-pending/', RejectAllPendingView.as_view()),
     path('job/<int:job_id>/accept-top/', AcceptTopCandidatesView.as_view()),
+
+    # Application tracker (from integration/frontend-backend)
+    path('', ApplicationListCreateView.as_view()),
+    path('<int:pk>/', ApplicationDetailView.as_view()),
 ]

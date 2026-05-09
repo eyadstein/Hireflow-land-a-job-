@@ -525,3 +525,28 @@ class AcceptTopCandidatesView(APIView):
             'rejected_ids': to_reject,
             'message': f'Accepted top {len(to_accept)}, rejected {len(to_reject)} for "{job.title}".',
         })
+
+
+# ── Application tracker endpoints (from integration/frontend-backend) ──
+
+class ApplicationListCreateView(generics.ListCreateAPIView):
+    serializer_class = ApplicationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Application.objects.filter(applicant=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(applicant=self.request.user)
+
+
+class ApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ApplicationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Application.objects.filter(applicant=self.request.user)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)

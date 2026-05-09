@@ -1,16 +1,17 @@
 import os
 import json
-from google import genai
+from groq import Groq
 
-GEMINI_KEY = os.environ.get('GEMINI_KEY', 'YOUR_KEY_HERE')
-client = genai.Client(api_key=GEMINI_KEY)
+groq_client = Groq(api_key=os.environ.get('GROQ_API_KEY', ''))
 
 
 def ask(prompt):
-    return client.models.generate_content(
-        model='gemini-2.0-flash',
-        contents=prompt,
-    ).text
+    response = groq_client.chat.completions.create(
+        model='llama-3.1-8b-instant',
+        messages=[{'role': 'user', 'content': prompt}],
+        temperature=0.7,
+    )
+    return response.choices[0].message.content
 
 
 tools = [
