@@ -1,29 +1,27 @@
 from rest_framework import generics, permissions
+from rest_framework.response import Response
 from .models import Application
 from .serializers import ApplicationSerializer
 
-class ApplyView(generics.CreateAPIView):
-    serializer_class = ApplicationSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
-    def perform_create(self, serializer):
-        serializer.save(applicant=self.request.user)
-
-class MyApplicationsView(generics.ListAPIView):
+class ApplicationListCreateView(generics.ListCreateAPIView):
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return Application.objects.filter(applicant=self.request.user)
 
-class JobApplicationsView(generics.ListAPIView):
+    def perform_create(self, serializer):
+        serializer.save(applicant=self.request.user)
+
+
+class ApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Application.objects.filter(job_id=self.kwargs['job_id'])
+        return Application.objects.filter(applicant=self.request.user)
 
-class UpdateStatusView(generics.UpdateAPIView):
-    serializer_class = ApplicationSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = Application.objects.all()
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)

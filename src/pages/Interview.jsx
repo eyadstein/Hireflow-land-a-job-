@@ -1,176 +1,212 @@
-import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
-import { motion, AnimatePresence } from "framer-motion";
-import { Users, Loader2, MessageSquare, ChevronRight, RotateCcw, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
+import { callAI } from "@/lib/ai";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Users, ChevronLeft, ChevronRight, Sparkles, RotateCcw } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
+import { motion, AnimatePresence } from "framer-motion";
+
+const questionBank = {
+  "Software Engineer": [
+    "Tell me about a project where you solved a difficult technical problem.",
+    "How do you debug an issue in production?",
+    "Explain the difference between state and props in React.",
+    "How do you improve performance in a web application?",
+    "Describe a time you worked closely with a product or design team.",
+  ],
+  "Data Analyst": [
+    "Walk me through your data analysis process.",
+    "How do you clean messy data before analysis?",
+    "Tell me about a dashboard or report you built.",
+    "How do you explain data findings to non-technical stakeholders?",
+    "Describe a time your analysis influenced a business decision.",
+  ],
+  "UI/UX Designer": [
+    "How do you approach a new product design problem?",
+    "Tell me about a time user research changed your design direction.",
+    "How do you balance user needs with business goals?",
+    "Walk me through your design process from wireframes to final UI.",
+    "How do you handle design feedback from developers or product managers?",
+  ],
+};
 
 export default function Interview() {
-  const [role, setRole] = useState("");
-  const [questions, setQuestions] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [activeQuestion, setActiveQuestion] = useState(null);
+  const [selectedRole, setSelectedRole] = useState("Software Engineer");
+  const [started, setStarted] = useState(false);
+  const [questionIndex, setQuestionIndex] = useState(0);
   const [answer, setAnswer] = useState("");
-  const [feedback, setFeedback] = useState(null);
-  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const generateQuestions = async () => {
-    if (!role) return;
-    setLoading(true);
-    setQuestions(null);
-    setActiveQuestion(null);
-    setFeedback(null);
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Generate 6 realistic interview questions for a ${role} position. Include a mix of behavioral, technical, and situational questions.`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          questions: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                question: { type: "string" },
-                category: { type: "string", description: "behavioral, technical, or situational" },
-                difficulty: { type: "string", description: "easy, medium, or hard" },
-              },
-            },
-          },
-        },
-      },
-    });
-    setQuestions(result.questions || []);
-    setLoading(false);
+  const questions = useMemo(() => questionBank[selectedRole] || [], [selectedRole]);
+  const currentQuestion = questions[questionIndex] || "";
+
+  const startSession = () => {
+    setStarted(true);
+    setQuestionIndex(0);
+    setAnswer("");
+    setFeedback("");
   };
 
-  const getFeedback = async (question) => {
-    if (!answer.trim()) return;
-    setFeedbackLoading(true);
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Evaluate this interview answer:
-Question: ${question}
-Role: ${role}
-Answer: ${answer}
+  const reset = () => {
+    setStarted(false);
+    setQuestionIndex(0);
+    setAnswer("");
+    setFeedback("");
+  };
 
-Provide constructive feedback.`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          score: { type: "number", description: "Score 1-10" },
-          feedback: { type: "string" },
-          improved_answer: { type: "string", description: "A stronger version of the answer" },
-        },
-      },
-    });
-    setFeedback(result);
-    setFeedbackLoading(false);
+  const next = () => {
+    if (questionIndex < questions.length - 1) {
+      setQuestionIndex((p) => p + 1);
+      setAnswer("");
+      setFeedback("");
+    }
+  };
+
+  const prev = () => {
+    if (questionIndex > 0) {
+      setQuestionIndex((p) => p - 1);
+      setAnswer("");
+      setFeedback("");
+    }
+  };
+
+  const getAIFeedback = async () => {
+    if (!answer.trim()) return;
+    setLoading(true);
+    setFeedback("");
+    try {
+      const prompt = `You are an interview coach.
+Target role: ${selectedRole}
+Interview question: ${currentQuestion}
+Candidate answer: ${answer}
+
+Evaluate the answer and provide:
+1. A score out of 10
+2. 3 strengths
+3. 3 areas to improve
+4. A stronger sample answer in 4–6 lines
+5. 3 specific improvement tips
+
+Keep it clear, practical, and professional.`;
+      setFeedback(await callAI(prompt));
+    } catch {
+      setFeedback("Could not generate feedback. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="p-8 lg:p-12 w-full max-w-[1400px]">
+    <div className="p-8 lg:p-12 w-full max-w-4xl">
       <PageHeader
         eyebrow="AI Tools"
-        title="Interview Prep"
-        description="Practice with AI-generated questions and get instant feedback."
+        title="Interview Coach"
+        description="Practice real questions for your target role and get instant AI feedback."
       />
 
-      {/* Role Input */}
-      <div className="flex gap-3 mb-8">
-        <Input
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          placeholder="Enter the role you're preparing for..."
-          className="bg-card flex-1"
-        />
-        <Button onClick={generateQuestions} disabled={!role || loading}>
-          {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Users className="w-4 h-4 mr-2" />}
-          Generate
-        </Button>
-      </div>
+      {!started ? (
+        <div className="bg-card border border-border rounded-xl p-8 flex flex-col items-center gap-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Users className="w-8 h-8 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold mb-1">Choose your target role</h2>
+            <p className="text-sm text-muted-foreground">You'll get 5 real interview questions with AI-scored feedback.</p>
+          </div>
+          <Select value={selectedRole} onValueChange={setSelectedRole}>
+            <SelectTrigger className="w-64">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.keys(questionBank).map((role) => (
+                <SelectItem key={role} value={role}>{role}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="lg" onClick={startSession}>
+            Start Interview Session
+          </Button>
+        </div>
+      ) : (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          {/* Header row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{selectedRole}</Badge>
+              <span className="text-sm text-muted-foreground">
+                Question {questionIndex + 1} of {questions.length}
+              </span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={reset}>
+              <RotateCcw className="w-4 h-4 mr-1.5" /> Change Role
+            </Button>
+          </div>
 
-      {/* Questions */}
-      {questions && (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Question List */}
-          <div className="lg:col-span-2 space-y-2">
-            {questions.map((q, i) => (
-              <motion.button
+          {/* Progress dots */}
+          <div className="flex gap-1.5">
+            {questions.map((_, i) => (
+              <div
                 key={i}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                onClick={() => { setActiveQuestion(q); setAnswer(""); setFeedback(null); }}
-                className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
-                  activeQuestion === q
-                    ? "border-primary/30 bg-primary/5"
-                    : "border-border bg-card hover:border-primary/15"
+                className={`h-1.5 flex-1 rounded-full transition-all ${
+                  i === questionIndex ? "bg-primary" : i < questionIndex ? "bg-primary/40" : "bg-secondary"
                 }`}
-              >
-                <div className="flex items-start gap-3">
-                  <span className="text-xs font-mono text-muted-foreground mt-0.5">{String(i + 1).padStart(2, "0")}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground line-clamp-2">{q.question}</p>
-                    <div className="flex gap-2 mt-1.5">
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
-                        {q.category}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
-                        {q.difficulty}
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                </div>
-              </motion.button>
+              />
             ))}
           </div>
 
-          {/* Answer & Feedback */}
-          <div className="lg:col-span-3">
-            {!activeQuestion ? (
-              <div className="bg-card border border-border rounded-xl p-12 text-center h-full flex flex-col items-center justify-center">
-                <MessageSquare className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground">Select a question to practice</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-card border border-border rounded-xl p-6">
-                  <p className="text-base font-medium text-foreground leading-relaxed mb-4">{activeQuestion.question}</p>
-                  <Textarea
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    placeholder="Type your answer here..."
-                    rows={6}
-                    className="mb-3"
-                  />
-                  <Button onClick={() => getFeedback(activeQuestion.question)} disabled={!answer.trim() || feedbackLoading} className="w-full">
-                    {feedbackLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                    {feedbackLoading ? "Evaluating..." : "Get Feedback"}
-                  </Button>
-                </div>
-
-                <AnimatePresence>
-                  {feedback && (
-                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-card border border-border rounded-xl p-6 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="text-3xl font-bold font-display text-foreground">{feedback.score}<span className="text-lg text-muted-foreground">/10</span></div>
-                      </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{feedback.feedback}</p>
-                      {feedback.improved_answer && (
-                        <div>
-                          <h4 className="text-sm font-semibold mb-2">Stronger Answer</h4>
-                          <p className="text-sm text-muted-foreground bg-secondary/50 p-4 rounded-lg leading-relaxed">{feedback.improved_answer}</p>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
+          {/* Question */}
+          <div className="bg-card border border-border rounded-xl p-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Question</p>
+            <p className="text-base font-medium leading-relaxed">{currentQuestion}</p>
           </div>
-        </div>
+
+          {/* Answer */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Your Answer</label>
+            <Textarea
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              placeholder="Answer naturally, as you would in a real interview..."
+              rows={5}
+              className="bg-card resize-none"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={prev} disabled={questionIndex === 0 || loading}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={next} disabled={questionIndex === questions.length - 1 || loading}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <Button className="flex-1" onClick={getAIFeedback} disabled={!answer.trim() || loading}>
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {loading ? "Generating feedback…" : "Get AI Feedback"}
+            </Button>
+          </div>
+
+          {/* Feedback */}
+          <AnimatePresence>
+            {feedback && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="bg-card border border-border rounded-xl p-6"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold">AI Feedback</span>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{feedback}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       )}
     </div>
   );

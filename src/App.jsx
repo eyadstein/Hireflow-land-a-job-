@@ -18,6 +18,9 @@ import Salary from "@/pages/Salary";
 import Chatbot from "@/pages/Chatbot";
 import Profile from "@/pages/Profile";
 import Recruiter from "@/pages/Recruiter";
+import SkillGap from "@/pages/SkillGap";
+import CareerRoadmap from "@/pages/CareerRoadmap";
+import ATSCheck from "@/pages/ATSCheck";
 
 function App() {
   return (
@@ -38,6 +41,9 @@ function App() {
             <Route path="/chatbot" element={<Chatbot />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/recruiter" element={<Recruiter />} />
+            <Route path="/skill-gap" element={<SkillGap />} />
+            <Route path="/career-roadmap" element={<CareerRoadmap />} />
+            <Route path="/ats-check" element={<ATSCheck />} />
           </Route>
 
           <Route path="*" element={<PageNotFound />} />

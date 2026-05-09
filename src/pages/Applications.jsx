@@ -1,21 +1,10 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { applications as appsApi } from "@/api/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus,
-  FileText,
-  Building2,
-  Calendar,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  Users,
-  Send,
-  Award,
+  Plus, FileText, Building2, Calendar, MoreHorizontal, Pencil,
+  Trash2, CheckCircle2, Clock, XCircle, Users, Send, Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,22 +18,18 @@ import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
 
 const statusConfig = {
-  applied: { label: "Applied", icon: Send, color: "bg-primary/10 text-primary border-primary/20" },
-  screening: { label: "Screening", icon: Clock, color: "bg-amber-100 text-amber-700 border-amber-200" },
-  interview: { label: "Interview", icon: Users, color: "bg-violet-100 text-violet-700 border-violet-200" },
-  offer: { label: "Offer", icon: Award, color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  rejected: { label: "Rejected", icon: XCircle, color: "bg-red-100 text-red-600 border-red-200" },
-  withdrawn: { label: "Withdrawn", icon: XCircle, color: "bg-secondary text-muted-foreground border-border" },
+  applied:   { label: "Applied",   icon: Send,         color: "bg-primary/10 text-primary border-primary/20" },
+  screening: { label: "Screening", icon: Clock,        color: "bg-amber-100 text-amber-700 border-amber-200" },
+  interview: { label: "Interview", icon: Users,        color: "bg-violet-100 text-violet-700 border-violet-200" },
+  offer:     { label: "Offer",     icon: Award,        color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  rejected:  { label: "Rejected",  icon: XCircle,      color: "bg-red-100 text-red-600 border-red-200" },
+  withdrawn: { label: "Withdrawn", icon: XCircle,      color: "bg-secondary text-muted-foreground border-border" },
 };
 
 const emptyForm = {
-  job_title: "",
-  company: "",
-  status: "applied",
+  job_title: "", company: "", status: "applied",
   applied_date: new Date().toISOString().split("T")[0],
-  notes: "",
-  contact_name: "",
-  contact_email: "",
+  notes: "", contact_name: "", contact_email: "",
 };
 
 export default function Applications() {
@@ -54,37 +39,27 @@ export default function Applications() {
   const [statusFilter, setStatusFilter] = useState("all");
   const queryClient = useQueryClient();
 
-  const { data: applications = [], isLoading } = useQuery({
+  const { data: appsList = [], isLoading } = useQuery({
     queryKey: ["applications"],
-    queryFn: () => base44.entities.Application.list("-created_date"),
+    queryFn: () => appsApi.list(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Application.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
-      closeDialog();
-    },
+    mutationFn: (data) => appsApi.create(data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["applications"] }); closeDialog(); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Application.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
-      closeDialog();
-    },
+    mutationFn: ({ id, data }) => appsApi.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["applications"] }); closeDialog(); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Application.delete(id),
+    mutationFn: (id) => appsApi.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["applications"] }),
   });
 
-  const closeDialog = () => {
-    setShowDialog(false);
-    setEditingApp(null);
-    setForm(emptyForm);
-  };
+  const closeDialog = () => { setShowDialog(false); setEditingApp(null); setForm(emptyForm); };
 
   const openEdit = (app) => {
     setEditingApp(app);
@@ -110,8 +85,8 @@ export default function Applications() {
   };
 
   const filtered = statusFilter === "all"
-    ? applications
-    : applications.filter((a) => a.status === statusFilter);
+    ? appsList
+    : appsList.filter((a) => a.status === statusFilter);
 
   return (
     <div className="p-8 lg:p-12 w-full max-w-[1600px]">
@@ -126,28 +101,23 @@ export default function Applications() {
         }
       />
 
-      {/* Status Filter */}
       <div className="flex flex-wrap gap-2 mb-6">
         <button
           onClick={() => setStatusFilter("all")}
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-            statusFilter === "all"
-              ? "bg-foreground text-background"
-              : "bg-secondary text-muted-foreground hover:text-foreground"
+            statusFilter === "all" ? "bg-foreground text-background" : "bg-secondary text-muted-foreground hover:text-foreground"
           }`}
         >
-          All ({applications.length})
+          All ({appsList.length})
         </button>
         {Object.entries(statusConfig).map(([key, config]) => {
-          const count = applications.filter((a) => a.status === key).length;
+          const count = appsList.filter((a) => a.status === key).length;
           return (
             <button
               key={key}
               onClick={() => setStatusFilter(key)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
-                statusFilter === key
-                  ? "bg-foreground text-background"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
+                statusFilter === key ? "bg-foreground text-background" : "bg-secondary text-muted-foreground hover:text-foreground"
               }`}
             >
               {config.label} ({count})
@@ -156,7 +126,6 @@ export default function Applications() {
         })}
       </div>
 
-      {/* Applications List */}
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -229,7 +198,6 @@ export default function Applications() {
         </div>
       )}
 
-      {/* Add/Edit Dialog */}
       <Dialog open={showDialog} onOpenChange={closeDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -265,10 +233,20 @@ export default function Applications() {
               <label className="text-sm font-medium mb-1.5 block">Notes</label>
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Add any notes..." rows={3} />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Contact Name</label>
+                <Input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} placeholder="Recruiter name" />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Contact Email</label>
+                <Input value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} placeholder="recruiter@company.com" />
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={!form.job_title || !form.company}>
+            <Button onClick={handleSubmit} disabled={!form.job_title || !form.company || createMutation.isPending || updateMutation.isPending}>
               {editingApp ? "Save Changes" : "Add Application"}
             </Button>
           </DialogFooter>

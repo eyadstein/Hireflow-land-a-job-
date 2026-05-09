@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { callAI } from "@/lib/ai";
 import { motion } from "framer-motion";
 import { PenLine, Loader2, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,31 +10,39 @@ import PageHeader from "@/components/shared/PageHeader";
 
 export default function CoverLetter() {
   const [form, setForm] = useState({
-    jobTitle: "",
+    name: "",
+    job_title: "",
     company: "",
-    jobDescription: "",
-    experience: "",
-    tone: "professional",
+    skills: "",
+    job_description: "",
   });
   const [letter, setLetter] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState("");
 
   const generate = async () => {
-    if (!form.jobTitle || !form.company) return;
+    if (!form.name || !form.job_title || !form.company) return;
     setLoading(true);
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Write a compelling cover letter for the following:
-Job Title: ${form.jobTitle}
-Company: ${form.company}
-Tone: ${form.tone}
-${form.jobDescription ? `Job Description: ${form.jobDescription}` : ""}
-${form.experience ? `Candidate Background: ${form.experience}` : ""}
+    setError("");
+    try {
+      const prompt = `Write a professional cover letter for the following:
 
-Write a professional, personalized cover letter. Do not use placeholders like [Your Name]. Keep it concise (3-4 paragraphs).`,
-    });
-    setLetter(result);
-    setLoading(false);
+Name: ${form.name}
+Job Title: ${form.job_title}
+Company: ${form.company}
+Skills: ${form.skills || "Not specified"}
+Job Description: ${form.job_description || "Not provided"}
+
+Write a compelling, personalized cover letter that highlights the candidate's skills and fit for the role. Keep it concise (3-4 paragraphs), professional, and tailored to the company. Do not include placeholder text — write it as a complete, ready-to-send letter.`;
+
+      const result = await callAI(prompt);
+      setLetter(result);
+    } catch (err) {
+      setError("Generation failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const copyToClipboard = () => {
@@ -56,36 +64,34 @@ Write a professional, personalized cover letter. Do not use placeholders like [Y
         <div className="space-y-4">
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <div>
+              <label className="text-sm font-medium mb-1.5 block">Your Name *</label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Ahmed Hassan" />
+            </div>
+            <div>
               <label className="text-sm font-medium mb-1.5 block">Job Title *</label>
-              <Input value={form.jobTitle} onChange={(e) => setForm({ ...form, jobTitle: e.target.value })} placeholder="e.g. Product Designer" />
+              <Input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} placeholder="e.g. Product Designer" />
             </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">Company *</label>
               <Input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. Stripe" />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Tone</label>
-              <Select value={form.tone} onValueChange={(v) => setForm({ ...form, tone: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="professional">Professional</SelectItem>
-                  <SelectItem value="friendly">Friendly</SelectItem>
-                  <SelectItem value="confident">Confident</SelectItem>
-                  <SelectItem value="creative">Creative</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium mb-1.5 block">Your Skills</label>
+              <Input value={form.skills} onChange={(e) => setForm({ ...form, skills: e.target.value })} placeholder="e.g. React, Node.js, Figma..." />
             </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">Job Description</label>
-              <Textarea value={form.jobDescription} onChange={(e) => setForm({ ...form, jobDescription: e.target.value })} placeholder="Paste the job listing..." rows={4} />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Your Background</label>
-              <Textarea value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} placeholder="Briefly describe your experience..." rows={3} />
+              <Textarea value={form.job_description} onChange={(e) => setForm({ ...form, job_description: e.target.value })} placeholder="Paste the job listing..." rows={4} />
             </div>
           </div>
 
-          <Button onClick={generate} disabled={!form.jobTitle || !form.company || loading} className="w-full">
+          {error && (
+            <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
+          <Button onClick={generate} disabled={!form.name || !form.job_title || !form.company || loading} className="w-full">
             {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PenLine className="w-4 h-4 mr-2" />}
             {loading ? "Generating..." : "Generate Cover Letter"}
           </Button>
