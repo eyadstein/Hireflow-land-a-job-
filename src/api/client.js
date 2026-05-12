@@ -106,6 +106,13 @@ export const ai = {
   getLinkedinHistory: ()     => request('GET',  '/ai/linkedin/'),
 };
 
+export const recruiter = {
+  jobApplications:  (jobId)     => request('GET',  `/applications/job/${jobId}/`),
+  bulkDecision:     (ids, dec)  => request('POST', '/applications/bulk-decision/',             { application_ids: ids, decision: dec }),
+  rejectAllPending: (jobId)     => request('POST', `/applications/job/${jobId}/reject-all-pending/`),
+  acceptTop:        (jobId, n)  => request('POST', `/applications/job/${jobId}/accept-top/`,   { top_n: n }),
+};
+
 export const jobsLive = {
   search:    (params) => request('GET', `/jobs-aggregator/search/?${new URLSearchParams(params)}`),
   countries: ()       => request('GET', '/jobs-aggregator/countries/'),
