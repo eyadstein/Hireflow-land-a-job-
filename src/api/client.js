@@ -106,6 +106,15 @@ export const ai = {
   getLinkedinHistory: ()     => request('GET',  '/ai/linkedin/'),
 };
 
+export const recruiter = {
+  candidateProfile:  (uid)       => request('GET',    `/applications/candidate/${uid}/profile/`),
+  candidateTimeline: (uid)       => request('GET',    `/applications/candidate/${uid}/timeline/`),
+  candidateNotes:    (uid)       => request('GET',    `/applications/candidate/${uid}/notes/`),
+  addNote:           (uid, text) => request('POST',   `/applications/candidate/${uid}/notes/`, { content: text }),
+  updateNote:        (nid, text) => request('PUT',    `/applications/notes/${nid}/`,            { content: text }),
+  deleteNote:        (nid)       => request('DELETE', `/applications/notes/${nid}/`),
+};
+
 export const jobsLive = {
   search:    (params) => request('GET', `/jobs-aggregator/search/?${new URLSearchParams(params)}`),
   countries: ()       => request('GET', '/jobs-aggregator/countries/'),
