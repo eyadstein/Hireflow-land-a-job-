@@ -106,6 +106,10 @@ export const ai = {
   getLinkedinHistory: ()     => request('GET',  '/ai/linkedin/'),
 };
 
+export const recruiter = {
+  alerts: () => request('GET', '/jobs/alerts/'),
+};
+
 export const jobsLive = {
   search:    (params) => request('GET', `/jobs-aggregator/search/?${new URLSearchParams(params)}`),
   countries: ()       => request('GET', '/jobs-aggregator/countries/'),
