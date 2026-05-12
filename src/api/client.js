@@ -160,3 +160,45 @@ export const jobsLive = {
   stats:     (params) => request('GET', `/jobs-aggregator/stats/?${new URLSearchParams(params)}`),
   match:     (params) => request('GET', `/jobs-aggregator/match/?${new URLSearchParams(params)}`),
 };
+
+export const candidateMatching = {
+  // Candidate profiles for matching
+  profiles:           ()          => request('GET',  '/candidate-matching/profiles/'),
+  createProfile:      (data)      => request('POST', '/candidate-matching/profiles/', data),
+  updateProfile:      (id, data)  => request('PUT',  `/candidate-matching/profiles/${id}/`, data),
+
+  // Job requirements
+  requirements:       ()          => request('GET',  '/candidate-matching/requirements/'),
+  createRequirement:  (data)      => request('POST', '/candidate-matching/requirements/', data),
+  triggerMatching:    (id)        => request('POST', `/candidate-matching/requirements/${id}/trigger_matching/`),
+
+  // Matches
+  matches:            ()          => request('GET',  '/candidate-matching/matches/'),
+  topMatches:         ()          => request('GET',  '/candidate-matching/matches/top_matches/'),
+  shortlistCandidate: (id)        => request('POST', `/candidate-matching/matches/${id}/shortlist/`),
+
+  // History
+  history:            ()          => request('GET',  '/candidate-matching/history/'),
+};
+
+export const candidateCRM = {
+  // Profiles
+  profiles:           ()          => request('GET',  '/candidate-crm/profiles/'),
+  createProfile:      (data)      => request('POST', '/candidate-crm/profiles/', data),
+  updateStatus:       (id, data)  => request('POST', `/candidate-crm/profiles/${id}/update_status/`, data),
+
+  // Pipelines
+  pipelines:          ()          => request('GET',  '/candidate-crm/pipelines/'),
+  createPipeline:     (data)      => request('POST', '/candidate-crm/pipelines/', data),
+  pipelineStages:     ()          => request('GET',  '/candidate-crm/pipeline-stages/'),
+
+  // Interactions & tasks
+  interactions:       (params)    => request('GET',  `/candidate-crm/interactions/?${new URLSearchParams(params || {})}`),
+  createInteraction:  (data)      => request('POST', '/candidate-crm/interactions/', data),
+  tasks:              ()          => request('GET',  '/candidate-crm/tasks/'),
+  createTask:         (data)      => request('POST', '/candidate-crm/tasks/', data),
+
+  // Search & analytics
+  search:             (params)    => request('GET',  `/candidate-crm/search/?${new URLSearchParams(params || {})}`),
+  analytics:          ()          => request('GET',  '/candidate-crm/analytics/'),
+};

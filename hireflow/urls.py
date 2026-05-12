@@ -14,4 +14,6 @@ urlpatterns = [
     path('api/chat/',            include('chat.urls')),
     path('api/ai/',              include('ai_features.urls')),
     path('api/jobs-aggregator/', include('jobs_aggregator.urls')),
+    path('api/candidate-matching/', include('candidate_matching.urls')),
+    path('api/candidate-crm/', include('candidate_crm.urls')),
 ]
