@@ -18,6 +18,7 @@ import {
   Target,
   Map,
   ScanSearch,
+  TrendingUp,
 } from "lucide-react";
 
 const jobseekerNavItems = [
@@ -39,6 +40,7 @@ const jobseekerNavItems = [
 const recruiterNavItems = [
   { icon: Building2,       label: "Dashboard",    path: "/recruiter" },
   { icon: Briefcase,       label: "Job Board",    path: "/jobs" },
+  { icon: TrendingUp,      label: "Performance",  path: "/recruiter/performance" },
   { icon: User,            label: "Profile",      path: "/profile" },
 ];
 

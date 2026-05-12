@@ -106,6 +106,14 @@ export const ai = {
   getLinkedinHistory: ()     => request('GET',  '/ai/linkedin/'),
 };
 
+export const recruiter = {
+  performanceSummary:  () => request('GET', '/jobs/performance/summary/'),
+  activityLog:         () => request('GET', '/jobs/performance/activity-log/'),
+  decisionPatterns:    () => request('GET', '/jobs/performance/decision-patterns/'),
+  busiestPeriods:      () => request('GET', '/jobs/performance/busiest-periods/'),
+  responseTimes:       () => request('GET', '/jobs/performance/response-times/'),
+};
+
 export const jobsLive = {
   search:    (params) => request('GET', `/jobs-aggregator/search/?${new URLSearchParams(params)}`),
   countries: ()       => request('GET', '/jobs-aggregator/countries/'),
