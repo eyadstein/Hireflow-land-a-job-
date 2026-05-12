@@ -8,7 +8,9 @@ const JOBSEEKER_ONLY = [
   "/applications", "/tracker",
 ];
 
-const RECRUITER_ONLY = ["/recruiter"];
+const RECRUITER_ONLY = [
+  "/recruiter",
+];
 
 export default function AppLayout() {
   const navigate = useNavigate();
