@@ -32,7 +32,7 @@ class CandidateProfile(models.Model):
 
 
 class JobRequirement(models.Model):
-    job = models.OneToOneField(Job, on_delete=models.CASCADE, related_name='requirements')
+    job = models.OneToOneField(Job, on_delete=models.CASCADE, related_name='matching_requirement')
     required_skills = models.JSONField(default=list)
     experience_required = models.FloatField(default=0)
     education_required = models.CharField(max_length=50, choices=[
