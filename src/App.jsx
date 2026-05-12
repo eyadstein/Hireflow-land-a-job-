@@ -19,6 +19,13 @@ import Chatbot from "@/pages/Chatbot";
 import Profile from "@/pages/Profile";
 import Recruiter from "@/pages/Recruiter";
 import RecruiterAnalytics from "@/pages/recruiter/Analytics";
+import RecruiterPerformance from "@/pages/recruiter/Performance";
+import RecruiterCandidates from "@/pages/recruiter/Candidates";
+import RecruiterCandidateProfile from "@/pages/recruiter/CandidateProfile";
+import RecruiterCompare from "@/pages/recruiter/Compare";
+import RecruiterOptimize from "@/pages/recruiter/Optimize";
+import RecruiterAlerts from "@/pages/recruiter/Alerts";
+import RecruiterDecisions from "@/pages/recruiter/Decisions";
 import SkillGap from "@/pages/SkillGap";
 import CareerRoadmap from "@/pages/CareerRoadmap";
 import ATSCheck from "@/pages/ATSCheck";
@@ -43,6 +50,13 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/recruiter" element={<Recruiter />} />
             <Route path="/recruiter/analytics" element={<RecruiterAnalytics />} />
+            <Route path="/recruiter/performance" element={<RecruiterPerformance />} />
+            <Route path="/recruiter/candidates" element={<RecruiterCandidates />} />
+            <Route path="/recruiter/candidates/:userId" element={<RecruiterCandidateProfile />} />
+            <Route path="/recruiter/compare" element={<RecruiterCompare />} />
+            <Route path="/recruiter/optimize" element={<RecruiterOptimize />} />
+            <Route path="/recruiter/alerts" element={<RecruiterAlerts />} />
+            <Route path="/recruiter/decisions" element={<RecruiterDecisions />} />
             <Route path="/skill-gap" element={<SkillGap />} />
             <Route path="/career-roadmap" element={<CareerRoadmap />} />
             <Route path="/ats-check" element={<ATSCheck />} />

@@ -19,6 +19,12 @@ import {
   Map,
   ScanSearch,
   BarChart3,
+  TrendingUp,
+  UserSearch,
+  GitCompare,
+  Wrench,
+  AlertTriangle,
+  CheckSquare,
 } from "lucide-react";
 
 const jobseekerNavItems = [
@@ -38,10 +44,16 @@ const jobseekerNavItems = [
 ];
 
 const recruiterNavItems = [
-  { icon: Building2,       label: "Dashboard",    path: "/recruiter" },
-  { icon: Briefcase,       label: "Job Board",    path: "/jobs" },
-  { icon: BarChart3,       label: "Analytics",    path: "/recruiter/analytics" },
-  { icon: User,            label: "Profile",      path: "/profile" },
+  { icon: Building2,    label: "Dashboard",    path: "/recruiter" },
+  { icon: Briefcase,    label: "My Jobs",      path: "/jobs" },
+  { icon: BarChart3,    label: "Analytics",    path: "/recruiter/analytics" },
+  { icon: TrendingUp,   label: "Performance",  path: "/recruiter/performance" },
+  { icon: UserSearch,   label: "Candidates",   path: "/recruiter/candidates" },
+  { icon: GitCompare,   label: "Compare",      path: "/recruiter/compare" },
+  { icon: Wrench,       label: "Optimize",     path: "/recruiter/optimize" },
+  { icon: AlertTriangle,label: "Alerts",       path: "/recruiter/alerts" },
+  { icon: CheckSquare,  label: "Decisions",    path: "/recruiter/decisions" },
+  { icon: User,         label: "Profile",      path: "/profile" },
 ];
 
 export default function AppSidebar() {

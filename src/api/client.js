@@ -107,12 +107,51 @@ export const ai = {
 };
 
 export const recruiter = {
-  dashboard:           ()      => request('GET', '/jobs/dashboard/'),
-  trends:              ()      => request('GET', '/jobs/analytics/trends/'),
-  jobTypeDistribution: ()      => request('GET', '/jobs/analytics/job-type-distribution/'),
-  topJobs:             ()      => request('GET', '/jobs/analytics/top-jobs/'),
-  statusBreakdown:     ()      => request('GET', '/jobs/analytics/status-breakdown/'),
-  hiringVelocity:      ()      => request('GET', '/jobs/analytics/hiring-velocity/'),
+  // Dashboard
+  dashboard:            ()          => request('GET',  '/jobs/dashboard/'),
+  myJobs:               ()          => request('GET',  '/jobs/my-jobs/'),
+
+  // Hiring Intelligence
+  trends:               ()          => request('GET',  '/jobs/analytics/trends/'),
+  jobTypeDistribution:  ()          => request('GET',  '/jobs/analytics/job-type-distribution/'),
+  topJobs:              ()          => request('GET',  '/jobs/analytics/top-jobs/'),
+  statusBreakdown:      ()          => request('GET',  '/jobs/analytics/status-breakdown/'),
+  hiringVelocity:       ()          => request('GET',  '/jobs/analytics/hiring-velocity/'),
+
+  // Recruiter Performance
+  performanceSummary:   ()          => request('GET',  '/jobs/performance/summary/'),
+  activityLog:          ()          => request('GET',  '/jobs/performance/activity-log/'),
+  decisionPatterns:     ()          => request('GET',  '/jobs/performance/decision-patterns/'),
+  busiestPeriods:       ()          => request('GET',  '/jobs/performance/busiest-periods/'),
+  responseTimes:        ()          => request('GET',  '/jobs/performance/response-times/'),
+
+  // Top Candidate Identification
+  rankedCandidates:     (jobId)     => request('GET',  `/jobs/${jobId}/ranked-candidates/`),
+  starCandidates:       ()          => request('GET',  '/jobs/star-candidates/'),
+
+  // Candidate Insight Panel
+  candidateProfile:     (uid)       => request('GET',  `/applications/candidate/${uid}/profile/`),
+  candidateTimeline:    (uid)       => request('GET',  `/applications/candidate/${uid}/timeline/`),
+  candidateNotes:       (uid)       => request('GET',  `/applications/candidate/${uid}/notes/`),
+  addNote:              (uid, text) => request('POST', `/applications/candidate/${uid}/notes/`, { content: text }),
+  updateNote:           (nid, text) => request('PUT',  `/applications/notes/${nid}/`,           { content: text }),
+  deleteNote:           (nid)       => request('DELETE',`/applications/notes/${nid}/`),
+
+  // Candidate Comparison
+  compareCandidates:    (ids)       => request('POST', '/applications/compare/',              { candidate_ids: ids }),
+
+  // Job Performance Optimization
+  jobOptimize:          (jobId)     => request('GET',  `/jobs/${jobId}/optimize/`),
+  optimizationReport:   ()          => request('GET',  '/jobs/optimization-report/'),
+
+  // Risk & Behaviour Alerts
+  alerts:               ()          => request('GET',  '/jobs/alerts/'),
+
+  // One-Click Decisions
+  jobApplications:      (jobId)     => request('GET',  `/applications/job/${jobId}/`),
+  bulkDecision:         (ids, dec)  => request('POST', '/applications/bulk-decision/',         { application_ids: ids, decision: dec }),
+  rejectAllPending:     (jobId)     => request('POST', `/applications/job/${jobId}/reject-all-pending/`),
+  acceptTop:            (jobId, n)  => request('POST', `/applications/job/${jobId}/accept-top/`, { top_n: n }),
 };
 
 export const jobsLive = {
