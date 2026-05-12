@@ -106,6 +106,11 @@ export const ai = {
   getLinkedinHistory: ()     => request('GET',  '/ai/linkedin/'),
 };
 
+export const recruiter = {
+  rankedCandidates: (jobId) => request('GET', `/jobs/${jobId}/ranked-candidates/`),
+  starCandidates:   ()      => request('GET', '/jobs/star-candidates/'),
+};
+
 export const jobsLive = {
   search:    (params) => request('GET', `/jobs-aggregator/search/?${new URLSearchParams(params)}`),
   countries: ()       => request('GET', '/jobs-aggregator/countries/'),
