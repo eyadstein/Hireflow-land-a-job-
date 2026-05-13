@@ -14,6 +14,7 @@ const columns = [
   { id: "screening", label: "Screening", accent: "bg-amber-500" },
   { id: "interview", label: "Interview", accent: "bg-violet-500" },
   { id: "offer",     label: "Offer",     accent: "bg-emerald-500" },
+  { id: "accepted",  label: "Accepted",  accent: "bg-green-500" },
   { id: "rejected",  label: "Rejected",  accent: "bg-red-500" },
 ];
 
@@ -22,7 +23,8 @@ export default function Tracker() {
 
   const { data: appsList = [], isLoading } = useQuery({
     queryKey: ["applications"],
-    queryFn: () => appsApi.list(),
+    queryFn: appsApi.mine,
+    refetchInterval: 30000,
   });
 
   const updateMutation = useMutation({
@@ -41,7 +43,7 @@ export default function Tracker() {
     return (
       <div className="p-8 lg:p-12">
         <PageHeader eyebrow="Pipeline" title="Application Tracker" />
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-6 gap-4">
           {columns.map((col) => (
             <div key={col.id} className="h-64 bg-secondary/50 rounded-xl animate-pulse" />
           ))}
@@ -72,7 +74,7 @@ export default function Tracker() {
       />
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 overflow-x-auto">
           {columns.map((col) => {
             const items = appsList.filter((a) => (a.status || "applied") === col.id);
             return (

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { recruiter, jobs as jobsApi } from "@/api/client";
+import { recruiter } from "@/api/client";
 import { UserSearch, Star, Loader2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -21,10 +21,11 @@ export default function Candidates() {
   const [selectedJobId, setSelectedJobId] = useState("");
   const [activeTab, setActiveTab] = useState("ranked");
 
-  const { data: myJobs = [] } = useQuery({
+  const { data: myJobsData } = useQuery({
     queryKey: ["r-my-jobs"],
-    queryFn: jobsApi.list,
+    queryFn: recruiter.myJobs,
   });
+  const myJobs = Array.isArray(myJobsData) ? myJobsData : (myJobsData?.results ?? []);
 
   const { data: ranked, isLoading: rankLoading } = useQuery({
     queryKey: ["r-ranked", selectedJobId],

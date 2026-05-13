@@ -67,7 +67,7 @@ class JobRequirementViewSet(viewsets.ModelViewSet):
     def find_candidates(self, request, pk=None):
         job_requirement = self.get_object()
         serializer = JobMatchingRequestSerializer(data=request.data)
-        
+
         if serializer.is_valid():
             service = CandidateMatchingService()
             matches = service.find_matches_for_job(
@@ -75,11 +75,31 @@ class JobRequirementViewSet(viewsets.ModelViewSet):
                 limit=serializer.validated_data.get('limit', 10),
                 min_score=serializer.validated_data.get('min_score', 0.0)
             )
-            
+
             matches_serializer = CandidateMatchSerializer(matches, many=True)
             return Response(matches_serializer.data)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def trigger_matching(self, request, pk=None):
+        """Trigger ML matching for a job requirement — alias for find_candidates."""
+        job_requirement = self.get_object()
+        try:
+            service = CandidateMatchingService()
+            matches = service.find_matches_for_job(
+                job_id=job_requirement.job.id,
+                limit=20,
+                min_score=0.0
+            )
+            matches_serializer = CandidateMatchSerializer(matches, many=True)
+            return Response({
+                'message': f'Matching completed for "{job_requirement.job.title}".',
+                'total_matches': len(matches),
+                'matches': matches_serializer.data,
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=True, methods=['post'])
     def update_all_matches(self, request, pk=None):
@@ -119,6 +139,39 @@ class CandidateMatchViewSet(viewsets.ModelViewSet):
         
         return queryset.order_by('-overall_score')
     
+    @action(detail=False, methods=['get'])
+    def top_matches(self, request):
+        """Return top-scoring matches for the current user's jobs (recruiter) or profile (jobseeker)."""
+        from jobs.models import Job
+        my_job_ids = Job.objects.filter(
+            posted_by=request.user
+        ).values_list('id', flat=True)
+
+        if my_job_ids:
+            matches = self.get_queryset().filter(job_id__in=my_job_ids)
+        else:
+            try:
+                matches = self.get_queryset().filter(
+                    candidate=request.user.candidate_profile
+                )
+            except Exception:
+                matches = self.get_queryset()
+
+        serializer = self.get_serializer(matches[:50], many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def shortlist(self, request, pk=None):
+        """Mark a candidate match as recommended/shortlisted."""
+        match = self.get_object()
+        match.is_recommended = True
+        match.save(update_fields=['is_recommended'])
+        serializer = self.get_serializer(match)
+        return Response({
+            'message': 'Candidate shortlisted successfully.',
+            'match': serializer.data,
+        })
+
     @action(detail=False, methods=['get'])
     def my_matches(self, request):
         try:

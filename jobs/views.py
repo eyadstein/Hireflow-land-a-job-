@@ -696,7 +696,7 @@ def analyze_job_health(job):
         field_status['location'] = 'missing'
         suggestions.append('Add a location. Candidates filter by location — missing it reduces visibility.')
 
-    if job.salary and len(job.salary) >= 3:
+    if job.salary_min or job.salary_max:
         score += 15
         field_status['salary'] = 'good'
     else:
@@ -974,7 +974,7 @@ def generate_alerts(recruiter):
 
         # ── Alert 6: Incomplete job posting ──
         missing_fields = []
-        if not job.salary:
+        if not job.salary_min and not job.salary_max:
             missing_fields.append('salary')
         if not job.description or len(job.description) < 50:
             missing_fields.append('description')
