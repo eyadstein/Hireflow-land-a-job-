@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     ResumeAnalyzerView,
+    SkillGapView,
     CoverLetterView,
     SalaryEstimatorView,
     InterviewCoachView,
@@ -15,10 +16,12 @@ from .views import (
     MockInterviewDetailView,
     LinkedInOptimizerView,
     LinkedInOptimizerDetailView,
+    ExtractTextView,
 )
 
 urlpatterns = [
     path('resume-analyzer/',           ResumeAnalyzerView.as_view()),
+    path('skill-gap/',                 SkillGapView.as_view()),
     path('cover-letter/',              CoverLetterView.as_view()),
     path('salary-estimator/',          SalaryEstimatorView.as_view()),
     path('interview-coach/',           InterviewCoachView.as_view()),
@@ -35,4 +38,5 @@ urlpatterns = [
     path('linkedin/',                  LinkedInOptimizerView.as_view()),
     path('linkedin/optimize/',         LinkedInOptimizerView.as_view()),
     path('linkedin/<int:pk>/',         LinkedInOptimizerDetailView.as_view()),
+    path('extract-text/',              ExtractTextView.as_view()),
 ]
