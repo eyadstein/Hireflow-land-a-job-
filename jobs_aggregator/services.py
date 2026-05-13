@@ -5,23 +5,27 @@ from datetime import datetime, timezone
 from .filters import detect_experience_level, detect_job_type, filter_jobs
 
 # ── Arab countries config ─────────────────────────────────────
+# adzuna_country: must be one of Adzuna's supported codes.
+# All Arab countries map to 'gb' (global/UK endpoint — broadest coverage).
+# The country name is appended to the search query so results stay relevant.
 ARAB_COUNTRIES = {
-    'egypt': {'jsearch': 'EG', 'adzuna': 'eg', 'name': 'Egypt'},
-    'uae': {'jsearch': 'AE', 'adzuna': 'ae', 'name': 'UAE'},
-    'saudi': {'jsearch': 'SA', 'adzuna': 'sa', 'name': 'Saudi Arabia'},
-    'qatar': {'jsearch': 'QA', 'adzuna': 'qa', 'name': 'Qatar'},
-    'kuwait': {'jsearch': 'KW', 'adzuna': 'kw', 'name': 'Kuwait'},
-    'jordan': {'jsearch': 'JO', 'adzuna': 'jo', 'name': 'Jordan'},
-    'morocco': {'jsearch': 'MA', 'adzuna': 'ma', 'name': 'Morocco'},
-    'bahrain': {'jsearch': 'BH', 'adzuna': 'bh', 'name': 'Bahrain'},
-    'oman': {'jsearch': 'OM', 'adzuna': 'om', 'name': 'Oman'},
-    'lebanon': {'jsearch': 'LB', 'adzuna': 'lb', 'name': 'Lebanon'},
-    'tunisia': {'jsearch': 'TN', 'adzuna': 'tn', 'name': 'Tunisia'},
-    'algeria': {'jsearch': 'DZ', 'adzuna': 'dz', 'name': 'Algeria'},
+    'egypt':   {'jsearch': 'Egypt',        'adzuna': 'gb', 'name': 'Egypt'},
+    'uae':     {'jsearch': 'UAE',           'adzuna': 'gb', 'name': 'UAE'},
+    'saudi':   {'jsearch': 'Saudi Arabia',  'adzuna': 'gb', 'name': 'Saudi Arabia'},
+    'qatar':   {'jsearch': 'Qatar',         'adzuna': 'gb', 'name': 'Qatar'},
+    'kuwait':  {'jsearch': 'Kuwait',        'adzuna': 'gb', 'name': 'Kuwait'},
+    'jordan':  {'jsearch': 'Jordan',        'adzuna': 'gb', 'name': 'Jordan'},
+    'morocco': {'jsearch': 'Morocco',       'adzuna': 'gb', 'name': 'Morocco'},
+    'bahrain': {'jsearch': 'Bahrain',       'adzuna': 'gb', 'name': 'Bahrain'},
+    'oman':    {'jsearch': 'Oman',          'adzuna': 'gb', 'name': 'Oman'},
+    'lebanon': {'jsearch': 'Lebanon',       'adzuna': 'gb', 'name': 'Lebanon'},
+    'tunisia': {'jsearch': 'Tunisia',       'adzuna': 'gb', 'name': 'Tunisia'},
+    'algeria': {'jsearch': 'Algeria',       'adzuna': 'gb', 'name': 'Algeria'},
 }
 
 # ── JSearch API ───────────────────────────────────────────────
-def fetch_jsearch(query, country_code, page=1):
+def fetch_jsearch(query, country_name, page=1):
+    # country_name is a human-readable string e.g. "Egypt", "UAE"
     try:
         res = requests.get(
             'https://jsearch.p.rapidapi.com/search',
@@ -30,9 +34,9 @@ def fetch_jsearch(query, country_code, page=1):
                 'X-RapidAPI-Host': 'jsearch.p.rapidapi.com'
             },
             params={
-                'query': f'{query} in {country_code}',
+                'query': f'{query} in {country_name}',
                 'page': page,
-                'num_results': 10,
+                'num_results': 20,
                 'date_posted': 'month',
             },
             timeout=10
@@ -66,15 +70,18 @@ def fetch_jsearch(query, country_code, page=1):
         return []
 
 # ── Adzuna API ────────────────────────────────────────────────
-def fetch_adzuna(query, country_code, page=1):
+def fetch_adzuna(query, country_code, page=1, location_hint=''):
+    # country_code must be a supported Adzuna code (gb, us, au, etc.)
+    # location_hint is appended to the query so results stay geographically relevant
     try:
+        what_query = f'{query} {location_hint}'.strip() if location_hint else query
         res = requests.get(
             f'https://api.adzuna.com/v1/api/jobs/{country_code}/search/{page}',
             params={
                 'app_id': settings.ADZUNA_APP_ID,
                 'app_key': settings.ADZUNA_APP_KEY,
-                'what': query,
-                'results_per_page': 10,
+                'what': what_query,
+                'results_per_page': 20,
                 'sort_by': 'date',
                 'content-type': 'application/json',
             },
@@ -110,7 +117,7 @@ def fetch_remotive(query):
     try:
         res = requests.get(
             'https://remotive.com/api/remote-jobs',
-            params={'search': query, 'limit': 10},
+            params={'search': query, 'limit': 20},
             timeout=10
         )
         data = res.json()
@@ -182,19 +189,35 @@ def aggregate_jobs(query, country='uae', include_remote=True, page=1, filters=No
     country_config = ARAB_COUNTRIES.get(country.lower(), ARAB_COUNTRIES['uae'])
 
     all_jobs = []
+    country_name = country_config['name']
+
+    def safe_result(future, source_name):
+        try:
+            return future.result()
+        except Exception as e:
+            print(f"[aggregator] {source_name} future raised: {e}")
+            return []
 
     from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        jsearch_future = executor.submit(fetch_jsearch, query, country_config['jsearch'], page)
-        adzuna_future = executor.submit(fetch_adzuna, query, country_config['adzuna'], page)
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        jsearch_p1 = executor.submit(fetch_jsearch, query, country_name, page)
+        jsearch_p2 = executor.submit(fetch_jsearch, query, country_name, page + 1)
+        adzuna_p1  = executor.submit(fetch_adzuna,  query, country_config['adzuna'], page,     country_name)
+        adzuna_p2  = executor.submit(fetch_adzuna,  query, country_config['adzuna'], page + 1, country_name)
         remotive_future = executor.submit(fetch_remotive, query) if include_remote else None
-        themuse_future = executor.submit(fetch_themuse, query, page)
+        themuse_p1 = executor.submit(fetch_themuse, query, page)
+        themuse_p2 = executor.submit(fetch_themuse, query, page + 1)
 
-        all_jobs.extend(jsearch_future.result())
-        all_jobs.extend(adzuna_future.result())
+        all_jobs.extend(safe_result(jsearch_p1, 'JSearch p1'))
+        all_jobs.extend(safe_result(jsearch_p2, 'JSearch p2'))
+        all_jobs.extend(safe_result(adzuna_p1,  'Adzuna p1'))
+        all_jobs.extend(safe_result(adzuna_p2,  'Adzuna p2'))
         if remotive_future:
-            all_jobs.extend(remotive_future.result())
-        all_jobs.extend(themuse_future.result())
+            all_jobs.extend(safe_result(remotive_future, 'Remotive'))
+        all_jobs.extend(safe_result(themuse_p1, 'TheMuse p1'))
+        all_jobs.extend(safe_result(themuse_p2, 'TheMuse p2'))
+
+    print(f"[aggregator] raw results: {len(all_jobs)} jobs for '{query}' in {country_name}")
 
     # Remove expired jobs
     from datetime import datetime, timezone
