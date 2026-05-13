@@ -19,7 +19,7 @@ const sendMessage = async (userId, text) => {
   const res = await fetch(`${API_BASE}/chat/${userId}/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-    body: JSON.stringify({ content: text }),
+    body: JSON.stringify({ encrypted_text: text }),
   });
   if (!res.ok) throw await res.json();
   return res.json();

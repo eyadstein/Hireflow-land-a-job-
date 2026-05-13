@@ -83,8 +83,11 @@ export const jobs = {
 
 export const applications = {
   list: () => request('GET', '/applications/'),
+  mine: () => request('GET', '/applications/mine/'),
+  apply: (data) => request('POST', '/applications/apply/', data),
   create: (data) => request('POST', '/applications/', data),
   update: (id, data) => request('PATCH', `/applications/${id}/`, data),
+  updateStatus: (id, data) => request('PATCH', `/applications/${id}/status/`, data),
   delete: (id) => request('DELETE', `/applications/${id}/`),
 };
 

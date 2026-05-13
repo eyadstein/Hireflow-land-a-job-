@@ -41,7 +41,7 @@ export default function Applications() {
 
   const { data: appsList = [], isLoading } = useQuery({
     queryKey: ["applications"],
-    queryFn: () => appsApi.list(),
+    queryFn: appsApi.mine,
   });
 
   const createMutation = useMutation({

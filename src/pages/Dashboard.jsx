@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { auth, applications as appsApi, jobs as jobsApi } from "@/api/client";
+import { auth, applications as appsApi } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -29,11 +29,6 @@ export default function Dashboard() {
   const { data: appsList = [] } = useQuery({
     queryKey: ["applications"],
     queryFn: () => appsApi.list(),
-  });
-
-  const { data: jobs = [] } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: () => jobsApi.list(),
   });
 
   const applied = appsList.filter((a) => a.status === "applied").length;

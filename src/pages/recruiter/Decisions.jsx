@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { recruiter, jobs as jobsApi } from "@/api/client";
+import { recruiter } from "@/api/client";
 import { CheckSquare, Loader2, CheckCircle2, XCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,8 @@ export default function Decisions() {
   const [topN,          setTopN]          = useState(1);
   const [lastResult,    setLastResult]    = useState(null);
 
-  const { data: myJobs = [] } = useQuery({ queryKey: ["r-my-jobs"], queryFn: jobsApi.list });
+  const { data: myJobsData } = useQuery({ queryKey: ["r-my-jobs"], queryFn: recruiter.myJobs });
+  const myJobs = Array.isArray(myJobsData) ? myJobsData : (myJobsData?.results ?? []);
 
   const { data: applications = [], isLoading: appsLoading } = useQuery({
     queryKey: ["r-job-apps", selectedJobId],

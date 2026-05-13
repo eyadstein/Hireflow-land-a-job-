@@ -1,200 +1,221 @@
 ﻿# HireFlow
 
-> AI-powered job search and career development platform.
+AI-powered job marketplace and career assistant platform.
 
-[![Python](https://img.shields.io/badge/Python-3.14-blue)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://python.org)
 [![Django](https://img.shields.io/badge/Django-6.0-green)](https://djangoproject.com)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-blue)](https://postgresql.org)
+[![React](https://img.shields.io/badge/React-19.2.5-blue)](https://react.dev)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-
----
-
-## Table of Contents
-
-- [About](#about)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Backend Environment Variables](#backend-environment-variables)
-- [Frontend Development](#frontend-development)
-- [API Reference](#api-reference)
-- [Documentation](#documentation)
 
 ---
 
 ## About
 
-HireFlow is a full-stack job marketplace and career assistant platform that combines job aggregation, AI-powered career tools, profile verification, and real-time chat.
+HireFlow is a combined backend + frontend job platform for job seekers and recruiters.
 
-The repository contains:
-- Django backend with REST API and WebSocket support.
-- React + Vite frontend.
-- AI features for resume analysis, cover letters, salary estimation, mock interviews, and more.
-- Job aggregation and matching services.
+It provides:
+- Job posting, application tracking, and recruiter dashboards.
+- AI tools for resume analysis, cover letters, salary estimation, interview practice, and CV generation.
+- External job aggregation and candidate matching.
+- A React SPA served by Django with a single deployable project root.
+
+---
+
+## Technology Stack
+
+- Backend: Django 6, Django REST Framework, Django Channels
+- Frontend: React 19, Vite, Tailwind CSS, Radix UI
+- Database: SQLite for local development, PostgreSQL optional in production
+- AI: `google-generativeai`, `groq`, `pdfplumber`
+- ML: `scikit-learn`
+
+---
+
+## Prerequisites
+
+- Python 3.10 or newer
+- Node.js 18+ and npm
+- Git
+- Optional: PostgreSQL 14+ if using a production database
+
+---
+
+## Setup
+
+1. Clone the repository:
+
+```powershell
+git clone <repo-url>
+cd "d:\Semester 6\Software\Project\Hireflow-land-a-job-"
+```
+
+2. Create and activate a virtual environment:
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+```
+
+3. Install Python dependencies:
+
+```powershell
+pip install -r requirements.txt
+```
+
+4. Install frontend dependencies:
+
+```powershell
+npm install
+```
+
+5. Create `.env.local` in the repository root and add the keys below.
+
+6. Build the frontend and start the app:
+
+```powershell
+.\start.ps1
+```
+
+The app is served at `http://localhost:8000`.
+
+---
+
+## Environment Variables
+
+Create `.env.local` with:
+
+```env
+SECRET_KEY=your_secret_key
+DEBUG=True
+DB_NAME=hireflow
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=localhost
+DB_PORT=5432
+GEMINI_KEY=your_gemini_key
+GROQ_API_KEY=your_groq_key
+JSEARCH_KEY=your_jsearch_key
+ADZUNA_APP_ID=your_adzuna_app_id
+ADZUNA_APP_KEY=your_adzuna_app_key
+```
+
+Notes:
+- If `DB_NAME` is unset, the project uses local `db.sqlite3`.
+- `DEBUG=True` is fine for local development but must be disabled for production.
+- `.env.local` is loaded by `python-dotenv` in `hireflow/settings.py`.
+
+---
+
+## Running Locally
+
+The `start.ps1` script does:
+- `npm run build`
+- `python manage.py migrate`
+- `python manage.py runserver`
+
+If you only want to run the backend and build once:
+
+```powershell
+npm run build
+python manage.py migrate
+python manage.py runserver
+```
+
+For frontend-only development:
+
+```powershell
+npm run dev
+```
+
+> Use `npm run dev` only for frontend debugging. Production mode relies on the built `dist/` folder served by Django.
 
 ---
 
 ## Project Structure
 
-- `hireflow/` — Django project configuration and routing.
-- `users/` — authentication, profile management, and user API.
-- `jobs/` — internal job posting and job detail APIs.
-- `applications/` — application submission and status updates.
-- `chat/` — conversation and messaging APIs.
-- `jobs_aggregator/` — external job aggregation, search, and matching.
-- `ai_features/` — AI-powered career tools and document generation.
-- `src/` — React frontend app built with Vite.
-- `requirements.txt` — Python dependencies.
-- `package.json` — frontend dependencies and scripts.
+- `hireflow/` — Django config, settings, URLs, ASGI/WGSI entrypoints
+- `users/` — auth, custom user model, profile APIs
+- `jobs/` — job posting, recruiter analytics, optimization logic
+- `applications/` — application models, candidate notes, status updates
+- `chat/` — messaging API and optional websocket routing
+- `jobs_aggregator/` — external job search and aggregator service
+- `ai_features/` — resume, cover letter, salary, interview, CV, and LinkedIn AI tools
+- `candidate_matching/` — matching logic and ranking
+- `candidate_crm/` — CRM workflows and pipeline management
+- `src/` — React SPA
+- `dist/` — built React production app
+- `db.sqlite3` — local SQLite database
+- `requirements.txt` — backend Python dependencies
+- `package.json` — frontend dependencies and scripts
+- `.env.local` — environment settings (not committed)
 
 ---
 
-## Getting Started
+## Important Notes
 
-### Prerequisites
-- Python 3.10 or newer
-- Node.js 18+ / npm
-- PostgreSQL 14+
-- Git
-
-### Backend Setup
-
-1. Clone the repository:
-```bash
-git clone https://github.com/eyadstein/Hireflow-land-a-job-.git
-cd 'd:\Semester 6\Software\Project\Hireflow-land-a-job-'
-```
-
-2. Create and activate a Python virtual environment:
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-3. Install backend dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Configure environment variables:
-Create a `.env` file in the repository root with the values described below.
-
-5. Create the PostgreSQL database:
-```bash
-psql -U postgres -c "CREATE DATABASE hireflow;"
-```
-
-6. Apply Django migrations:
-```bash
-python manage.py migrate
-```
-
-7. Create an admin user:
-```bash
-python manage.py createsuperuser
-```
-
-8. Run the backend server:
-```bash
-python manage.py runserver
-```
-
-The backend will be available at `http://127.0.0.1:8000`.
+- `hireflow/settings.py` currently enables `DEBUG=True`, `ALLOWED_HOSTS=['*']`, and `CORS_ALLOW_ALL_ORIGINS=True`.
+- `SECRET_KEY` is hardcoded in settings and must be moved to environment variables before production.
+- `dist/` is built into the repository and served by Django; rebuild it after frontend changes.
+- `db.sqlite3` is used locally and should not be treated as a production database.
+- Chat backend includes websocket routing, but the frontend currently uses REST polling.
 
 ---
 
-## Backend Environment Variables
+## Known Issues and Improvements
 
-The backend currently reads these values from the environment:
+### Production readiness
+- `DEBUG=True` is enabled in `hireflow/settings.py`
+- `SECRET_KEY` is hardcoded
+- `ALLOWED_HOSTS` and CORS are wide open
+- Channels use in-memory layers instead of Redis
+- No production deployment or containerization docs
 
-- `SECRET_KEY` — Django secret key.
-- `DEBUG` — set to `False` in production.
-- `DB_NAME` — database name (`hireflow` by default).
-- `DB_USER` — database user (`postgres` by default).
-- `DB_PASSWORD` — database password (`postgres` by default).
-- `DB_HOST` — database host (`localhost` by default).
-- `DB_PORT` — database port (`5432` by default).
-- `GEMINI_KEY` — AI service key used by the AI feature endpoints.
+### Functional gaps
+- Some AI tools require valid `GEMINI_KEY` and `GROQ_API_KEY` to operate
+- Chat UI is not fully real-time; it polls REST endpoints
+- Candidate matching and CRM features need integration testing
+- No API documentation like Swagger/OpenAPI
+- No automated tests in the current repository
 
-> Note: The repository includes a local `db.sqlite3` file, but the Django settings are configured for PostgreSQL by default.
-
----
-
-## Frontend Development
-
-Install frontend dependencies and run the React app:
-
-```bash
-npm install
-npm run dev
-```
-
-The frontend will be served by Vite, typically at `http://127.0.0.1:5173`.
+### Code quality
+- `jobs/views.py` is large and should be split into smaller modules
+- Business logic is mixed into view logic instead of dedicated services
+- A few frontend pages rely on assumptions about job data shape
 
 ---
 
-## API Reference
+## API Quick Reference
 
-Most API endpoints live under the `/api/` namespace.
+Primary endpoints are served from `/api/`.
 
-### Authentication
-- `POST /api/users/register/`
-- `POST /api/users/login/`
-- `POST /api/users/refresh/`
-- `GET /api/users/profile/`
-- `PATCH /api/users/profile/`
-- `GET /api/users/all/`
+- `/api/users/` — auth and profile APIs
+- `/api/jobs/` — job management and analytics
+- `/api/applications/` — applications and candidate notes
+- `/api/chat/` — messaging APIs
+- `/api/ai/` — AI career tools
+- `/api/jobs-aggregator/` — external job search
+- `/api/candidate-matching/` — matching workflows
+- `/api/candidate-crm/` — CRM actions
 
-### Jobs
-- `GET /api/jobs/`
-- `POST /api/jobs/`
-- `GET /api/jobs/<id>/`
+---
 
-### Applications
-- `POST /api/applications/apply/`
-- `GET /api/applications/mine/`
-- `GET /api/applications/job/<job_id>/`
-- `PATCH /api/applications/<id>/status/`
+## Recommended Next Actions
 
-### Chat
-- `GET /api/chat/<user_id>/`
-
-### AI Features
-- `POST /api/ai/resume-analyzer/`
-- `POST /api/ai/cover-letter/`
-- `POST /api/ai/salary-estimator/`
-- `POST /api/ai/interview-coach/`
-- `POST /api/ai/chat/`
-- `GET /api/ai/career-roadmap/`
-- `GET /api/ai/career-roadmap/<id>/`
-- `POST /api/ai/cv/`
-- `POST /api/ai/cv/build/`
-- `GET /api/ai/cv/<id>/download/`
-- `POST /api/ai/mock-interview/start/`
-- `POST /api/ai/mock-interview/submit/`
-- `GET /api/ai/mock-interview/history/`
-- `GET /api/ai/mock-interview/<id>/`
-- `POST /api/ai/linkedin/`
-- `POST /api/ai/linkedin/optimize/`
-- `GET /api/ai/linkedin/<id>/`
-
-### Job Aggregator
-- `GET /api/jobs-aggregator/search/`
-- `GET /api/jobs-aggregator/countries/`
-- `GET /api/jobs-aggregator/stats/`
-- `GET /api/jobs-aggregator/match/`
+1. Add environment-based settings and remove hardcoded secrets.
+2. Add API documentation with DRF schema tools.
+3. Add basic backend tests for auth, jobs, and applications.
+4. Refactor the largest Django views into service modules.
+5. Validate AI endpoints with actual API keys and error handling.
+6. Decide if WebSocket chat should be used or the websocket route removed.
 
 ---
 
 ## Documentation
 
-Expanded documentation is available in the `docs/` folder:
-- `docs/architecture.md` — architecture and component overview.
-- `docs/api-reference.md` — endpoint reference.
+See `docs/architecture.md` and `docs/api-reference.md` for additional architecture and API details.
 
 ---
 
-## Notes
+## License
 
-- This repository combines both backend and frontend code in the same root.
-- For production, set `DEBUG=False`, configure allowed hosts, and use secure secrets management.
-- Review any third-party API keys or external integration settings before deploying.
+This project is licensed under the MIT License.
