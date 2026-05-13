@@ -16,4 +16,7 @@ class MessageListView(generics.ListCreateAPIView):
         ).order_by('timestamp')
 
     def perform_create(self, serializer):
-        serializer.save(sender=self.request.user)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        recipient = User.objects.get(id=self.kwargs['user_id'])
+        serializer.save(sender=self.request.user, recipient=recipient)

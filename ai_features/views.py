@@ -1,6 +1,9 @@
 import os
+import io
 import json
-from google import genai
+import pdfplumber
+import docx
+from groq import Groq
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions
@@ -13,15 +16,16 @@ from .models import (
     LinkedInOptimization,
 )
 
-GEMINI_KEY = os.environ.get('GEMINI_KEY', 'YOUR_GEMINI_KEY_HERE')
-client = genai.Client(api_key=GEMINI_KEY)
+groq_client = Groq(api_key=os.environ.get('GROQ_API_KEY', ''))
 
 
-def ask_gemini(prompt):
-    return client.models.generate_content(
-        model='gemini-2.0-flash',
-        contents=prompt,
-    ).text
+def ask_groq(prompt):
+    response = groq_client.chat.completions.create(
+        model='llama-3.1-8b-instant',
+        messages=[{'role': 'user', 'content': prompt}],
+        temperature=0.7,
+    )
+    return response.choices[0].message.content
 
 
 class ResumeAnalyzerView(APIView):
@@ -57,7 +61,7 @@ Resume: {resume_text}
 Return ONLY the JSON, no markdown.
 """
         try:
-            result = ask_gemini(prompt)
+            result = ask_groq(prompt)
             clean  = result.replace('```json', '').replace('```', '').strip()
             return Response(json.loads(clean))
         except Exception as e:
@@ -88,7 +92,7 @@ Write a compelling, personalized cover letter. 3-4 paragraphs. Professional tone
 Return ONLY the cover letter text, no extra explanation.
 """
         try:
-            result = ask_gemini(prompt)
+            result = ask_groq(prompt)
             return Response({'cover_letter': result})
         except Exception as e:
             return Response({'error': str(e)}, status=500)
@@ -130,7 +134,7 @@ Return ONLY a JSON object:
 Return ONLY the JSON, no markdown.
 """
         try:
-            result = ask_gemini(prompt)
+            result = ask_groq(prompt)
             clean  = result.replace('```json', '').replace('```', '').strip()
             return Response(json.loads(clean))
         except Exception as e:
@@ -171,7 +175,51 @@ Return ONLY a JSON object:
 Return ONLY the JSON, no markdown.
 """
         try:
-            result = ask_gemini(prompt)
+            result = ask_groq(prompt)
+            clean  = result.replace('```json', '').replace('```', '').strip()
+            return Response(json.loads(clean))
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+class SkillGapView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        resume_text     = request.data.get('resume_text', '')
+        job_description = request.data.get('job_description', '')
+
+        if not resume_text:
+            return Response({'error': 'resume_text is required'}, status=400)
+        if not job_description:
+            return Response({'error': 'job_description is required'}, status=400)
+
+        prompt = f"""
+You are an expert skill gap analyst and career coach.
+Compare the candidate's resume against the job description and return ONLY a JSON object:
+{{
+  "matchScore": <0-100>,
+  "matchedSkills": ["<skill1>", "<skill2>", "<skill3>"],
+  "missingSkills": ["<skill1>", "<skill2>", "<skill3>"],
+  "weakSkills": ["<skill1>", "<skill2>"],
+  "recommendations": [
+    "<actionable recommendation 1>",
+    "<actionable recommendation 2>",
+    "<actionable recommendation 3>"
+  ],
+  "summary": "<2-3 sentence overall assessment>"
+}}
+
+Resume:
+{resume_text}
+
+Job Description:
+{job_description}
+
+Return ONLY the JSON, no markdown.
+"""
+        try:
+            result = ask_groq(prompt)
             clean  = result.replace('```json', '').replace('```', '').strip()
             return Response(json.loads(clean))
         except Exception as e:
@@ -279,7 +327,7 @@ Return ONLY a JSON object:
 Return ONLY the JSON, no markdown.
 """
         try:
-            result       = ask_gemini(prompt)
+            result       = ask_groq(prompt)
             clean        = result.replace('```json', '').replace('```', '').strip()
             roadmap_data = json.loads(clean)
 
@@ -377,7 +425,7 @@ Keep it to 3-4 sentences max. Use strong action words.
 Original: {summary}
 Return ONLY the improved summary text, nothing else.
 """
-                    enhanced_summary = ask_gemini(sum_prompt).strip()
+                    enhanced_summary = ask_groq(sum_prompt).strip()
 
                 if experience:
                     exp_prompt = f"""
@@ -387,7 +435,7 @@ Return ONLY a JSON array with the same structure but improved descriptions.
 Experience: {json.dumps(experience)}
 Return ONLY the JSON array, no markdown.
 """
-                    exp_result          = ask_gemini(exp_prompt)
+                    exp_result          = ask_groq(exp_prompt)
                     exp_clean           = exp_result.replace('```json', '').replace('```', '').strip()
                     enhanced_experience = json.loads(exp_clean)
 
@@ -473,7 +521,7 @@ Return ONLY a JSON object:
 Return ONLY the JSON, no markdown.
 """
         try:
-            result    = ask_gemini(prompt)
+            result    = ask_groq(prompt)
             clean     = result.replace('```json', '').replace('```', '').strip()
             data      = json.loads(clean)
             questions = data.get('questions', [])
@@ -558,7 +606,7 @@ Questions and Answers to grade:
 Return ONLY the JSON, no markdown.
 """
         try:
-            result      = ask_gemini(grade_prompt)
+            result      = ask_groq(grade_prompt)
             clean       = result.replace('```json', '').replace('```', '').strip()
             graded_data = json.loads(clean)
 
@@ -727,7 +775,7 @@ Return ONLY a JSON object:
 Return ONLY the JSON, no markdown.
 """
         try:
-            result = ask_gemini(prompt)
+            result = ask_groq(prompt)
             clean  = result.replace('```json', '').replace('```', '').strip()
             data   = json.loads(clean)
 
@@ -774,3 +822,42 @@ class LinkedInOptimizerDetailView(APIView):
             'optimized':     o.optimized,
             'created_at':    o.created_at.strftime('%Y-%m-%d'),
         })
+
+
+class ExtractTextView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        file = request.FILES.get('file') or request.FILES.get('resume')
+        if not file:
+            return Response({'error': 'No file provided'}, status=400)
+
+        name = file.name.lower()
+        content = file.read()
+
+        try:
+            if name.endswith('.pdf'):
+                text = self._extract_pdf(content)
+            elif name.endswith('.docx'):
+                text = self._extract_docx(content)
+            elif name.endswith('.txt'):
+                text = content.decode('utf-8', errors='ignore')
+            else:
+                return Response({'error': 'Unsupported file type. Use PDF, DOCX, or TXT.'}, status=400)
+
+            return Response({'text': text.strip()})
+        except Exception as e:
+            return Response({'error': f'Extraction failed: {str(e)}'}, status=500)
+
+    def _extract_pdf(self, content):
+        text = []
+        with pdfplumber.open(io.BytesIO(content)) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text.append(page_text)
+        return '\n'.join(text)
+
+    def _extract_docx(self, content):
+        doc = docx.Document(io.BytesIO(content))
+        return '\n'.join(p.text for p in doc.paragraphs if p.text.strip())
