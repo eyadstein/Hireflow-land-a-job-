@@ -1,386 +1,221 @@
-# HireFlow Backend
+﻿# HireFlow
 
-> AI-Powered Job Search Platform for the Arab World
+AI-powered job marketplace and career assistant platform.
 
-[![Python](https://img.shields.io/badge/Python-3.14-blue)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://python.org)
 [![Django](https://img.shields.io/badge/Django-6.0-green)](https://djangoproject.com)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-blue)](https://postgresql.org)
+[![React](https://img.shields.io/badge/React-19.2.5-blue)](https://react.dev)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-
----
-
-## Table of Contents
-
-- [About](#about)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [API Endpoints](#api-endpoints)
-- [Environment Variables](#environment-variables)
-- [Project Structure](#project-structure)
-- [Roadmap](#roadmap)
-- [Team](#team)
 
 ---
 
 ## About
 
-HireFlow is an AI-powered job search and career development platform built specifically for the Arab world. It aggregates job listings from multiple sources across 12+ Arab countries, provides AI-powered career tools, and helps job seekers land their dream jobs faster.
+HireFlow is a combined backend + frontend job platform for job seekers and recruiters.
+
+It provides:
+- Job posting, application tracking, and recruiter dashboards.
+- AI tools for resume analysis, cover letters, salary estimation, interview practice, and CV generation.
+- External job aggregation and candidate matching.
+- A React SPA served by Django with a single deployable project root.
 
 ---
 
-## Features
+## Technology Stack
 
-### Authentication & Security
-- JWT-based authentication (register, login, refresh)
-- Email & Phone OTP verification
-- Profile verification with badge system
-- Rate limiting & brute force protection
-- End-to-end encrypted chat
-
-### User Profiles
-- Complete profile builder
-- Verification badges (🔵 Blue / 🌸 Pink / 👑 Gold)
-- Profile completion tracker
-- Skills, experience, education management
-- Cannot apply to jobs without verified profile
-
-### Jobs
-- Live job aggregation from 4 sources (JSearch, Adzuna, Remotive, The Muse)
-- 12+ Arab countries supported
-- Smart filtering by level (Student → Executive)
-- Job type filtering (Full-time, Part-time, Remote, Internship, Freelance)
-- Save & bookmark jobs with notes
-- Job alerts with frequency settings (instant, daily, weekly)
-- Job match score based on user profile
-
-### AI Features
-- Resume ATS analyzer with score & suggestions
-- AI cover letter generator
-- Salary estimator for Arab countries
-- Interview coach with Q&A
-- HireBot AI agent (multi-tool conversational AI)
-- Career roadmap generator
-
-### Communication
-- End-to-end encrypted messaging
-- WebRTC voice & video calls
-- Django Channels WebSocket support
-- Push notifications (FCM)
-
-### Plans & Monetization
-- Free plan (5 AI uses/day, 10 saved jobs, 2 alerts)
-- Pro plan (unlimited everything)
-- Referral system (3 referrals = Pro upgrade)
-- Plan usage tracking
-
-### Notifications
-- Email OTP via Gmail SMTP
-- SMS OTP via Africa's Talking
-- Push notifications via FCM
+- Backend: Django 6, Django REST Framework, Django Channels
+- Frontend: React 19, Vite, Tailwind CSS, Radix UI
+- Database: SQLite for local development, PostgreSQL optional in production
+- AI: `google-generativeai`, `groq`, `pdfplumber`
+- ML: `scikit-learn`
 
 ---
 
-## Tech Stack
+## Prerequisites
 
-| Layer | Technology |
-|-------|-----------|
-| Language | Python 3.14 |
-| Framework | Django 6.0 + Django REST Framework |
-| Database | PostgreSQL 18 |
-| Real-time | Django Channels + Daphne |
-| AI | Google Gemini 2.0 Flash + Groq (Llama 3) |
-| Auth | JWT (SimpleJWT) |
-| SMS | Africa's Talking |
-| Email | Gmail SMTP |
-| Jobs | JSearch + Adzuna + Remotive + The Muse |
-| Deployment | Render.com |
-
----
-
-## Getting Started
-
-### Prerequisites
-- Python 3.10+
-- PostgreSQL 14+
+- Python 3.10 or newer
+- Node.js 18+ and npm
 - Git
+- Optional: PostgreSQL 14+ if using a production database
 
-### Installation
+---
 
-**1. Clone the repository:**
-```bash
-git clone https://github.com/eyadstein/Hireflow-land-a-job-.git
-cd Hireflow-land-a-job-/hireflow-backend
+## Setup
+
+1. Clone the repository:
+
+```powershell
+git clone <repo-url>
+cd "d:\Semester 6\Software\Project\Hireflow-land-a-job-"
 ```
 
-**2. Create virtual environment:**
-```bash
+2. Create and activate a virtual environment:
+
+```powershell
 python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Mac/Linux
-source venv/bin/activate
+.\venv\Scripts\Activate.ps1
 ```
 
-**3. Install dependencies:**
-```bash
+3. Install Python dependencies:
+
+```powershell
 pip install -r requirements.txt
 ```
 
-**4. Create `.env` file:**
-```bash
-cp .env.example .env
-# Fill in your values (see Environment Variables section)
+4. Install frontend dependencies:
+
+```powershell
+npm install
 ```
 
-**5. Create PostgreSQL database:**
-```bash
-psql -U postgres -c "CREATE DATABASE hireflow;"
+5. Create `.env.local` in the repository root and add the keys below.
+
+6. Build the frontend and start the app:
+
+```powershell
+.\start.ps1
 ```
 
-**6. Run migrations:**
-```bash
-python manage.py migrate
-```
-
-**7. Create superuser:**
-```bash
-python manage.py createsuperuser
-```
-
-**8. Run the server:**
-```bash
-python manage.py runserver
-```
-
-Server runs at: `http://127.0.0.1:8000`
-
----
-
-## API Endpoints
-
-### Authentication
-```
-POST   /api/users/register/     Register new user
-POST   /api/users/login/        Login (get JWT tokens)
-POST   /api/users/refresh/      Refresh JWT token
-GET    /api/users/profile/      Get current user profile
-PATCH  /api/users/profile/      Update profile
-GET    /api/users/all/          List all users
-```
-
-### OTP Verification
-```
-POST   /api/otp/send/email/     Send email OTP
-POST   /api/otp/send/phone/     Send phone OTP
-POST   /api/otp/verify/email/   Verify email OTP
-POST   /api/otp/verify/phone/   Verify phone OTP
-GET    /api/otp/status/         Check verification status
-```
-
-### Profile Verification & Badges
-```
-GET    /api/verification/completion/   Profile completion %
-POST   /api/verification/verify/       Trigger verification
-GET    /api/verification/badges/       Badge info
-GET    /api/verification/can-apply/    Check if can apply
-```
-
-### Jobs
-```
-GET    /api/jobs/                      List internal jobs
-POST   /api/jobs/                      Post a job (recruiter)
-GET    /api/jobs/<id>/                 Job details
-POST   /api/jobs/saved/toggle/         Save/unsave job
-GET    /api/jobs/saved/                List saved jobs
-GET    /api/jobs/saved/stats/          Saved jobs stats
-GET    /api/jobs/saved/check/<id>/     Check if saved
-PATCH  /api/jobs/saved/notes/<id>/     Update job notes
-POST   /api/jobs/alerts/               Create job alert
-GET    /api/jobs/alerts/               List my alerts
-PATCH  /api/jobs/alerts/<id>/          Update alert
-DELETE /api/jobs/alerts/<id>/          Delete alert
-POST   /api/jobs/alerts/<id>/toggle/   Activate/deactivate
-POST   /api/jobs/alerts/check/         Check for new matches
-GET    /api/jobs/alerts/matches/       Get unseen matches
-```
-
-### Live Job Aggregator
-```
-GET    /api/jobs-live/search/      Search jobs from all sources
-GET    /api/jobs-live/countries/   List Arab countries + filters
-GET    /api/jobs-live/stats/       Job counts by level
-GET    /api/jobs-live/match/       Jobs ranked by match score
-```
-
-Query params for search:
-```
-?q=flutter developer    Search query
-&country=egypt          Country (egypt, uae, saudi, qatar...)
-&level=junior           Level (student, graduate, junior, mid, senior, executive)
-&job_type=full_time     Type (full_time, part_time, internship, remote, freelance)
-&salary_min=1000        Minimum salary (USD)
-&salary_max=5000        Maximum salary (USD)
-&remote_only=true       Remote jobs only
-&page=1                 Page number
-```
-
-### Applications
-```
-POST   /api/applications/apply/         Apply to a job
-GET    /api/applications/mine/          My applications
-GET    /api/applications/job/<id>/      Applications for a job
-PATCH  /api/applications/<id>/status/   Update status (recruiter)
-```
-
-### AI Features
-```
-POST   /api/ai/resume/          Analyze resume (ATS score)
-POST   /api/ai/cover-letter/    Generate cover letter
-POST   /api/ai/salary/          Estimate salary
-POST   /api/ai/interview/       Generate interview questions
-POST   /api/ai/agent/           HireBot AI agent (chat)
-```
-
-### Chat
-```
-GET    /api/chat/<user_id>/     Get messages with user
-POST   /api/chat/<user_id>/     Send message
-POST   /api/chat/signal/<id>/   WebRTC signal
-GET    /api/chat/signal/<id>/   Get signals
-DELETE /api/chat/signal/<id>/   Clear signals
-POST   /api/chat/invite/<id>/   Send call invite
-GET    /api/chat/invite/<id>/   Get incoming call
-DELETE /api/chat/invite/<id>/   Decline call
-```
-
-### Plans
-```
-GET    /api/plans/status/                    Current plan status
-GET    /api/plans/compare/                   Free vs Pro comparison
-POST   /api/plans/upgrade/                   Request upgrade
-POST   /api/plans/upgrade/<id>/approve/      Admin approve upgrade
-```
-
-### Referrals
-```
-GET    /api/referrals/my-code/      Get my referral code
-GET    /api/referrals/stats/        Referral stats
-GET    /api/referrals/my-referrals/ List my referrals
-POST   /api/referrals/validate/     Validate a code
-POST   /api/referrals/apply/        Apply a referral code
-```
+The app is served at `http://localhost:8000`.
 
 ---
 
 ## Environment Variables
 
-Create a `.env` file in the backend root:
+Create `.env.local` with:
 
 ```env
-# Django
-SECRET_KEY=your-secret-key-here
+SECRET_KEY=your_secret_key
 DEBUG=True
-
-# Database
 DB_NAME=hireflow
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_HOST=localhost
 DB_PORT=5432
-
-# AI
-GEMINI_KEY=your-gemini-api-key
-GROQ_API_KEY=your-groq-api-key
-
-# Job APIs
-JSEARCH_KEY=your-jsearch-rapidapi-key
-ADZUNA_APP_ID=your-adzuna-app-id
-ADZUNA_APP_KEY=your-adzuna-app-key
-
-# Email
-EMAIL_HOST_USER=your-gmail@gmail.com
-EMAIL_HOST_PASSWORD=your-gmail-app-password
-
-# SMS
-AFRICASTALKING_USERNAME=sandbox
-AFRICASTALKING_API_KEY=your-africastalking-key
+GEMINI_KEY=your_gemini_key
+GROQ_API_KEY=your_groq_key
+JSEARCH_KEY=your_jsearch_key
+ADZUNA_APP_ID=your_adzuna_app_id
+ADZUNA_APP_KEY=your_adzuna_app_key
 ```
+
+Notes:
+- If `DB_NAME` is unset, the project uses local `db.sqlite3`.
+- `DEBUG=True` is fine for local development but must be disabled for production.
+- `.env.local` is loaded by `python-dotenv` in `hireflow/settings.py`.
+
+---
+
+## Running Locally
+
+The `start.ps1` script does:
+- `npm run build`
+- `python manage.py migrate`
+- `python manage.py runserver`
+
+If you only want to run the backend and build once:
+
+```powershell
+npm run build
+python manage.py migrate
+python manage.py runserver
+```
+
+For frontend-only development:
+
+```powershell
+npm run dev
+```
+
+> Use `npm run dev` only for frontend debugging. Production mode relies on the built `dist/` folder served by Django.
 
 ---
 
 ## Project Structure
 
-```
-hireflow-backend/
-├── hireflow/               ← Project settings & URLs
-│   ├── settings.py
-│   ├── urls.py
-│   ├── asgi.py
-│   └── wsgi.py
-├── users/                  ← Auth & user profiles
-├── jobs/                   ← Job listings, saved jobs, alerts
-├── jobs_aggregator/        ← Live job aggregation (4 APIs)
-├── applications/           ← Job applications
-├── chat/                   ← Messaging & WebRTC
-├── ai_features/            ← AI tools & HireBot agent
-├── verification/           ← Profile verification & badges
-├── otp/                    ← Email & phone OTP
-├── plans/                  ← Free vs Pro plan logic
-├── referrals/              ← Referral system
-├── Procfile                ← Render deployment
-├── build.sh                ← Build script
-├── requirements.txt        ← Dependencies
-└── manage.py
-```
+- `hireflow/` — Django config, settings, URLs, ASGI/WGSI entrypoints
+- `users/` — auth, custom user model, profile APIs
+- `jobs/` — job posting, recruiter analytics, optimization logic
+- `applications/` — application models, candidate notes, status updates
+- `chat/` — messaging API and optional websocket routing
+- `jobs_aggregator/` — external job search and aggregator service
+- `ai_features/` — resume, cover letter, salary, interview, CV, and LinkedIn AI tools
+- `candidate_matching/` — matching logic and ranking
+- `candidate_crm/` — CRM workflows and pipeline management
+- `src/` — React SPA
+- `dist/` — built React production app
+- `db.sqlite3` — local SQLite database
+- `requirements.txt` — backend Python dependencies
+- `package.json` — frontend dependencies and scripts
+- `.env.local` — environment settings (not committed)
 
 ---
 
-## Roadmap
+## Important Notes
 
-- [x] JWT Authentication
-- [x] User Profiles
-- [x] Job Aggregation (4 sources, 12 countries)
-- [x] AI Features (Resume, Cover Letter, Salary, Interview)
-- [x] HireBot AI Agent
-- [x] E2E Encrypted Chat
-- [x] WebRTC Voice & Video Calls
-- [x] Push Notifications (FCM)
-- [x] Save Jobs & Bookmarks
-- [x] Job Alerts System
-- [x] Job Match Score
-- [x] Company Reviews
-- [x] Referral System
-- [x] Free vs Pro Plans
-- [x] Profile Verification & Badges
-- [x] Email & Phone OTP
-- [ ] Swipe to Apply
-- [ ] Quick Apply with AI
-- [ ] Docker + CI/CD
-- [ ] Cybersecurity Hardening
-- [ ] AI Career Intelligence
-- [ ] Deploy to Render
+- `hireflow/settings.py` currently enables `DEBUG=True`, `ALLOWED_HOSTS=['*']`, and `CORS_ALLOW_ALL_ORIGINS=True`.
+- `SECRET_KEY` is hardcoded in settings and must be moved to environment variables before production.
+- `dist/` is built into the repository and served by Django; rebuild it after frontend changes.
+- `db.sqlite3` is used locally and should not be treated as a production database.
+- Chat backend includes websocket routing, but the frontend currently uses REST polling.
 
 ---
 
-## Team
+## Known Issues and Improvements
 
-| Name | Role |
-|------|------|
-| **Eyad Ahmed** | Backend Lead & Security |
-| **Mohanad** | AI Features & Frontend |
-| **Jana Abdelfattah** | Frontend & UI |
-| **Jana Farouk** | Job Data & Search |
-| **Omar** | Recruiter Portal |
+### Production readiness
+- `DEBUG=True` is enabled in `hireflow/settings.py`
+- `SECRET_KEY` is hardcoded
+- `ALLOWED_HOSTS` and CORS are wide open
+- Channels use in-memory layers instead of Redis
+- No production deployment or containerization docs
+
+### Functional gaps
+- Some AI tools require valid `GEMINI_KEY` and `GROQ_API_KEY` to operate
+- Chat UI is not fully real-time; it polls REST endpoints
+- Candidate matching and CRM features need integration testing
+- No API documentation like Swagger/OpenAPI
+- No automated tests in the current repository
+
+### Code quality
+- `jobs/views.py` is large and should be split into smaller modules
+- Business logic is mixed into view logic instead of dedicated services
+- A few frontend pages rely on assumptions about job data shape
+
+---
+
+## API Quick Reference
+
+Primary endpoints are served from `/api/`.
+
+- `/api/users/` — auth and profile APIs
+- `/api/jobs/` — job management and analytics
+- `/api/applications/` — applications and candidate notes
+- `/api/chat/` — messaging APIs
+- `/api/ai/` — AI career tools
+- `/api/jobs-aggregator/` — external job search
+- `/api/candidate-matching/` — matching workflows
+- `/api/candidate-crm/` — CRM actions
+
+---
+
+## Recommended Next Actions
+
+1. Add environment-based settings and remove hardcoded secrets.
+2. Add API documentation with DRF schema tools.
+3. Add basic backend tests for auth, jobs, and applications.
+4. Refactor the largest Django views into service modules.
+5. Validate AI endpoints with actual API keys and error handling.
+6. Decide if WebSocket chat should be used or the websocket route removed.
+
+---
+
+## Documentation
+
+See `docs/architecture.md` and `docs/api-reference.md` for additional architecture and API details.
 
 ---
 
 ## License
 
 This project is licensed under the MIT License.
-
----
-
-<p align="center">Built with ❤️ for the Arab world 🌍</p>
