@@ -19,6 +19,7 @@ import Chatbot from "@/pages/Chatbot";
 import Profile from "@/pages/Profile";
 import Messages from "@/pages/Messages";
 import Recruiter from "@/pages/Recruiter";
+
 import RecruiterAnalytics from "@/pages/recruiter/Analytics";
 import RecruiterPerformance from "@/pages/recruiter/Performance";
 import RecruiterCandidates from "@/pages/recruiter/Candidates";
@@ -29,6 +30,7 @@ import RecruiterAlerts from "@/pages/recruiter/Alerts";
 import RecruiterDecisions from "@/pages/recruiter/Decisions";
 import RecruiterMatching from "@/pages/recruiter/CandidateMatching";
 import RecruiterCRM from "@/pages/recruiter/CRM";
+
 import SkillGap from "@/pages/SkillGap";
 import CareerRoadmap from "@/pages/CareerRoadmap";
 import ATSCheck from "@/pages/ATSCheck";
@@ -41,13 +43,11 @@ function App() {
           <Route path="/login" element={<Login />} />
 
           <Route element={<AppLayout />}>
-            {/* Shared */}
             <Route path="/" element={<Dashboard />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/messages" element={<Messages />} />
 
-            {/* Job seeker */}
             <Route path="/applications" element={<Applications />} />
             <Route path="/tracker" element={<Tracker />} />
             <Route path="/resume-ai" element={<ResumeAI />} />
@@ -59,7 +59,6 @@ function App() {
             <Route path="/career-roadmap" element={<CareerRoadmap />} />
             <Route path="/ats-check" element={<ATSCheck />} />
 
-            {/* Recruiter */}
             <Route path="/recruiter" element={<Recruiter />} />
             <Route path="/recruiter/analytics" element={<RecruiterAnalytics />} />
             <Route path="/recruiter/performance" element={<RecruiterPerformance />} />

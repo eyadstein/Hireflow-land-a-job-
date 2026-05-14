@@ -1,42 +1,41 @@
 from django.urls import path
+
 from .views import (
+    AcceptTopCandidatesView,
+    ApplicationDetailView,
+    ApplicationListCreateView,
     ApplyView,
-    MyApplicationsView,
-    JobApplicationsView,
-    UpdateStatusView,
+    BulkDecisionView,
+    CandidateNotesView,
     CandidateProfileView,
     CandidateTimelineView,
-    CandidateNotesView,
-    NoteDetailView,
     CompareCandidatesView,
-    BulkDecisionView,
+    JobApplicationsView,
+    MyApplicationsView,
+    NoteDetailView,
+    RejectAllActiveView,
     RejectAllPendingView,
-    AcceptTopCandidatesView,
-    ApplicationListCreateView,
-    ApplicationDetailView,
+    UpdateStatusView,
 )
 
 urlpatterns = [
-    path('apply/', ApplyView.as_view()),
-    path('mine/', MyApplicationsView.as_view()),
-    path('job/<int:job_id>/', JobApplicationsView.as_view()),
-    path('<int:pk>/status/', UpdateStatusView.as_view()),
+    path("apply/", ApplyView.as_view(), name="apply"),
+    path("mine/", MyApplicationsView.as_view(), name="my_applications"),
+    path("job/<int:job_id>/", JobApplicationsView.as_view(), name="job_applications"),
+    path("<int:pk>/status/", UpdateStatusView.as_view(), name="update_application_status"),
 
-    # Candidate Insight Panel
-    path('candidate/<int:user_id>/profile/', CandidateProfileView.as_view()),
-    path('candidate/<int:user_id>/timeline/', CandidateTimelineView.as_view()),
-    path('candidate/<int:user_id>/notes/', CandidateNotesView.as_view()),
-    path('notes/<int:note_id>/', NoteDetailView.as_view()),
+    path("candidate/<int:user_id>/profile/", CandidateProfileView.as_view(), name="candidate_profile"),
+    path("candidate/<int:user_id>/timeline/", CandidateTimelineView.as_view(), name="candidate_timeline"),
+    path("candidate/<int:user_id>/notes/", CandidateNotesView.as_view(), name="candidate_notes"),
+    path("notes/<int:note_id>/", NoteDetailView.as_view(), name="candidate_note_detail"),
 
-    # Candidate Comparison Tool
-    path('compare/', CompareCandidatesView.as_view()),
+    path("compare/", CompareCandidatesView.as_view(), name="compare_candidates"),
+    path("bulk-decision/", BulkDecisionView.as_view(), name="bulk_decision"),
 
-    # One Click Decision Actions
-    path('bulk-decision/', BulkDecisionView.as_view()),
-    path('job/<int:job_id>/reject-all-pending/', RejectAllPendingView.as_view()),
-    path('job/<int:job_id>/accept-top/', AcceptTopCandidatesView.as_view()),
+    path("job/<int:job_id>/reject-all-pending/", RejectAllPendingView.as_view(), name="reject_all_pending"),
+    path("job/<int:job_id>/reject-all-active/", RejectAllActiveView.as_view(), name="reject_all_active"),
+    path("job/<int:job_id>/accept-top/", AcceptTopCandidatesView.as_view(), name="accept_top_candidates"),
 
-    # Application tracker (from integration/frontend-backend)
-    path('', ApplicationListCreateView.as_view()),
-    path('<int:pk>/', ApplicationDetailView.as_view()),
+    path("", ApplicationListCreateView.as_view(), name="applications"),
+    path("<int:pk>/", ApplicationDetailView.as_view(), name="application_detail"),
 ]
