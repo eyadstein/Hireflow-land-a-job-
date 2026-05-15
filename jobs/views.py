@@ -6,36 +6,50 @@ from django.db.models import Count, Q
 from django.db.models.functions import TruncDate, TruncWeek, ExtractHour, ExtractWeekDay
 from django.utils import timezone
 from datetime import timedelta
+
 from .models import Job
 from .serializers import JobSerializer
 from applications.models import Application
 
 
 class IsRecruiter(permissions.BasePermission):
+    message = "Only recruiter accounts can create or manage job posts."
+
     def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
         if request.method in permissions.SAFE_METHODS:
-            return request.user.is_authenticated
-        return request.user.is_authenticated and request.user.role == 'recruiter'
+            return True
+
+        return (
+            request.user.is_staff
+            or getattr(request.user, "role", None) in ["recruiter", "company", "admin"]
+        )
 
 
 class IsJobOwner(permissions.BasePermission):
+    message = "You can only modify your own job posts."
+
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return obj.posted_by == request.user
 
+        return obj.posted_by == request.user or request.user.is_staff
 
-# ── Eyad's existing endpoints ──
 
 class JobListCreateView(generics.ListCreateAPIView):
     serializer_class = JobSerializer
     permission_classes = [IsRecruiter]
 
     def get_queryset(self):
-        return Job.objects.all().order_by('-created_at')
+        return Job.objects.all().order_by("-created_at")
 
     def perform_create(self, serializer):
-        serializer.save(posted_by=self.request.user)
+        serializer.save(
+            posted_by=self.request.user,
+            source="recruiter",
+        )
 
 
 class JobDetailView(generics.RetrieveUpdateDestroyAPIView):

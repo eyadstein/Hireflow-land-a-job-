@@ -1,235 +1,532 @@
-import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle, CheckSquare, Loader2, Search, XCircle } from "lucide-react";
+
 import { recruiter } from "@/api/client";
-import { CheckSquare, Loader2, CheckCircle2, XCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+const ACTIVE_STATUSES = ["pending", "applied", "screening", "interview", "offer"];
+
+const statusLabels = {
+  pending: "Pending",
+  applied: "Applied",
+  screening: "Screening",
+  interview: "Interview",
+  offer: "Offer",
+  accepted: "Accepted",
+  rejected: "Rejected",
+  withdrawn: "Withdrawn",
+};
+
+const statusStyles = {
+  pending: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  applied: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  screening: "bg-blue-50 text-blue-700 border-blue-200",
+  interview: "bg-purple-50 text-purple-700 border-purple-200",
+  offer: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  accepted: "bg-green-50 text-green-700 border-green-200",
+  rejected: "bg-red-50 text-red-700 border-red-200",
+  withdrawn: "bg-gray-50 text-gray-700 border-gray-200",
+};
+
+function normalizeList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+}
+
+function getCandidateName(app) {
+  const fullName = `${app.applicant_first_name || ""} ${app.applicant_last_name || ""}`.trim();
+
+  return (
+    fullName ||
+    app.applicant_name ||
+    app.applicant_email ||
+    `Candidate #${app.applicant}`
+  );
+}
+
 export default function Decisions() {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
+
   const [selectedJobId, setSelectedJobId] = useState("");
-  const [selectedIds,   setSelectedIds]   = useState([]);
-  const [topN,          setTopN]          = useState(1);
-  const [lastResult,    setLastResult]    = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("active");
+  const [topN, setTopN] = useState(1);
+  const [message, setMessage] = useState("");
 
-  const { data: myJobsData } = useQuery({ queryKey: ["r-my-jobs"], queryFn: recruiter.myJobs });
-  const myJobs = Array.isArray(myJobsData) ? myJobsData : (myJobsData?.results ?? []);
-
-  const { data: applications = [], isLoading: appsLoading } = useQuery({
-    queryKey: ["r-job-apps", selectedJobId],
-    queryFn: () => recruiter.jobApplications(selectedJobId),
-    enabled: !!selectedJobId,
-    select: (data) => (Array.isArray(data) ? data : data?.results ?? []),
+  const {
+    data: jobsData,
+    isLoading: jobsLoading,
+    error: jobsError,
+  } = useQuery({
+    queryKey: ["recruiter-my-jobs"],
+    queryFn: recruiter.myJobs,
   });
 
-  const pendingApps = applications.filter((a) => a.status === "pending");
+  const jobs = normalizeList(jobsData);
 
-  const toggleSelect = (id) =>
-    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  const {
+    data: applicationsData,
+    isLoading: applicationsLoading,
+    error: applicationsError,
+  } = useQuery({
+    queryKey: ["recruiter-decision-applications", selectedJobId],
+    queryFn: () => recruiter.jobApplications(selectedJobId),
+    enabled: !!selectedJobId,
+    refetchInterval: 10000,
+  });
 
-  const selectAll   = () => setSelectedIds(pendingApps.map((a) => a.id));
-  const clearSelect = () => setSelectedIds([]);
+  const applications = normalizeList(applicationsData);
+
+  const selectedJob = jobs.find((job) => String(job.id) === String(selectedJobId));
+
+  const filteredApplications = useMemo(() => {
+    const cleanSearch = search.trim().toLowerCase();
+
+    return applications.filter((app) => {
+      const name = getCandidateName(app).toLowerCase();
+      const email = (app.applicant_email || "").toLowerCase();
+
+      const matchesSearch =
+        !cleanSearch ||
+        name.includes(cleanSearch) ||
+        email.includes(cleanSearch) ||
+        String(app.id).includes(cleanSearch);
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        app.status === statusFilter ||
+        (statusFilter === "active" && ACTIVE_STATUSES.includes(app.status));
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [applications, search, statusFilter]);
+
+  const actionableApplications = filteredApplications.filter((app) =>
+    ACTIVE_STATUSES.includes(app.status)
+  );
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({
+      queryKey: ["recruiter-decision-applications", selectedJobId],
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["recruiter-job-applications", selectedJobId],
+    });
+    queryClient.invalidateQueries({ queryKey: ["recruiter-my-jobs"] });
+    queryClient.invalidateQueries({ queryKey: ["recruiter-dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["recruiter-performance"] });
+    queryClient.invalidateQueries({ queryKey: ["applications"] });
+  };
 
   const bulkMutation = useMutation({
     mutationFn: ({ ids, decision }) => recruiter.bulkDecision(ids, decision),
     onSuccess: (data) => {
-      setLastResult({ type: "bulk", data });
+      setMessage(data?.message || "Decision saved successfully.");
       setSelectedIds([]);
-      qc.invalidateQueries({ queryKey: ["r-job-apps", selectedJobId] });
+      invalidateAll();
+    },
+    onError: (err) => {
+      setMessage(err?.message || "Failed to save decision.");
     },
   });
 
   const rejectAllMutation = useMutation({
-    mutationFn: () => recruiter.rejectAllPending(selectedJobId),
+    mutationFn: () => recruiter.rejectAllActive(selectedJobId),
     onSuccess: (data) => {
-      setLastResult({ type: "reject_all", data });
-      qc.invalidateQueries({ queryKey: ["r-job-apps", selectedJobId] });
+      setMessage(data?.message || "Active candidates rejected.");
+      setSelectedIds([]);
+      invalidateAll();
+    },
+    onError: (err) => {
+      setMessage(err?.message || "Failed to reject active candidates.");
     },
   });
 
   const acceptTopMutation = useMutation({
-    mutationFn: () => recruiter.acceptTop(selectedJobId, parseInt(topN) || 1),
+    mutationFn: () => recruiter.acceptTop(selectedJobId, Number(topN) || 1),
     onSuccess: (data) => {
-      setLastResult({ type: "accept_top", data });
-      qc.invalidateQueries({ queryKey: ["r-job-apps", selectedJobId] });
+      setMessage(data?.message || "Top candidates processed.");
+      setSelectedIds([]);
+      invalidateAll();
+    },
+    onError: (err) => {
+      setMessage(err?.message || "Failed to accept top candidates.");
     },
   });
 
-  const anyLoading = bulkMutation.isPending || rejectAllMutation.isPending || acceptTopMutation.isPending;
+  const anyLoading =
+    jobsLoading ||
+    applicationsLoading ||
+    bulkMutation.isPending ||
+    rejectAllMutation.isPending ||
+    acceptTopMutation.isPending;
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllActive = () => {
+    setSelectedIds(actionableApplications.map((app) => app.id));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds([]);
+  };
+
+  const runBulkDecision = (decision) => {
+    if (selectedIds.length === 0) {
+      setMessage("Select at least one candidate first.");
+      return;
+    }
+
+    setMessage("");
+    bulkMutation.mutate({
+      ids: selectedIds,
+      decision,
+    });
+  };
 
   return (
     <div className="p-8 lg:p-12 w-full max-w-[1600px]">
       <div className="mb-8">
-        <p className="text-primary font-semibold tracking-[0.25em] text-xs uppercase mb-3">Recruiter Portal</p>
+        <p className="text-primary font-semibold tracking-[0.25em] text-xs uppercase mb-3">
+          Recruiter Portal
+        </p>
+
         <h1 className="text-4xl font-black flex items-center gap-3">
           <CheckSquare className="w-8 h-8 text-primary" />
-          One-Click Decisions
+          Bulk Decisions
         </h1>
-        <p className="text-muted-foreground mt-2">Bulk accept/reject, reject all pending, or accept top-N candidates.</p>
+
+        <p className="text-muted-foreground mt-2">
+          Use this page only for bulk actions. For normal decisions, use Candidates.
+        </p>
       </div>
 
-      {/* Job Selector */}
       <div className="bg-card border border-border rounded-xl p-5 mb-6">
-        <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-2">Select Job</label>
-        <select
-          value={selectedJobId}
-          onChange={(e) => { setSelectedJobId(e.target.value); setSelectedIds([]); setLastResult(null); }}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm w-full max-w-md"
-        >
-          <option value="">— Choose a job —</option>
-          {myJobs.map((job) => (
-            <option key={job.id} value={job.id}>{job.title} · {job.company}</option>
-          ))}
-        </select>
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-2">
+              Job
+            </label>
+
+            <select
+              value={selectedJobId}
+              onChange={(event) => {
+                setSelectedJobId(event.target.value);
+                setSelectedIds([]);
+                setMessage("");
+              }}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm w-full"
+            >
+              <option value="">— Choose a job —</option>
+              {jobs.map((job) => (
+                <option key={job.id} value={job.id}>
+                  {job.title} · {job.company}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-2">
+              Search
+            </label>
+
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Candidate name, email, or app ID"
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-2">
+              Status
+            </label>
+
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm w-full"
+            >
+              <option value="active">Active only</option>
+              <option value="all">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="screening">Screening</option>
+              <option value="interview">Interview</option>
+              <option value="offer">Offer</option>
+              <option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option>
+              <option value="withdrawn">Withdrawn</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-2">
+              Accept Top N
+            </label>
+
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                min="1"
+                value={topN}
+                onChange={(event) => setTopN(event.target.value)}
+              />
+
+              <Button
+                type="button"
+                onClick={() => acceptTopMutation.mutate()}
+                disabled={!selectedJobId || anyLoading || actionableApplications.length === 0}
+              >
+                Apply
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Result Banner */}
-      {lastResult && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-sm text-green-700">
-          {lastResult.data?.message ?? "Done!"}
+      {(jobsError || applicationsError) && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6 text-sm">
+          {jobsError?.message ||
+            applicationsError?.message ||
+            "Failed to load decision data."}
         </div>
       )}
 
-      {selectedJobId && (
-        <div className="space-y-6">
-          {/* Stats */}
-          {!appsLoading && (
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-card border border-border rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold">{applications.length}</p>
-                <p className="text-xs text-muted-foreground mt-1">Total Applications</p>
-              </div>
-              <div className="bg-card border border-border rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-yellow-600">{pendingApps.length}</p>
-                <p className="text-xs text-muted-foreground mt-1">Pending</p>
-              </div>
-              <div className="bg-card border border-border rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-primary">{selectedIds.length}</p>
-                <p className="text-xs text-muted-foreground mt-1">Selected</p>
-              </div>
-            </div>
-          )}
+      {message && (
+        <div className="bg-secondary border border-border rounded-xl p-4 mb-6 text-sm">
+          {message}
+        </div>
+      )}
 
-          {/* Action Panel */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Quick Actions</h2>
-
-            {/* Bulk Decision */}
-            <div className="flex flex-wrap gap-2 items-center">
-              <Button
-                size="sm"
-                onClick={() => bulkMutation.mutate({ ids: selectedIds, decision: "accepted" })}
-                disabled={anyLoading || selectedIds.length === 0}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <CheckCircle2 className="w-4 h-4 mr-1" />
-                Accept Selected ({selectedIds.length})
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => bulkMutation.mutate({ ids: selectedIds, decision: "rejected" })}
-                disabled={anyLoading || selectedIds.length === 0}
-                variant="destructive"
-              >
-                <XCircle className="w-4 h-4 mr-1" />
-                Reject Selected ({selectedIds.length})
-              </Button>
-              <button onClick={selectAll}  className="text-xs text-primary hover:underline">Select All Pending</button>
-              <button onClick={clearSelect} className="text-xs text-muted-foreground hover:underline">Clear</button>
+      {!selectedJobId ? (
+        <div className="bg-card border border-border rounded-xl p-10 text-center">
+          <p className="font-semibold">Choose a job first</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Candidates and bulk actions will appear here.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div className="bg-card border border-border rounded-xl p-4 text-center">
+              <p className="text-2xl font-black">{applications.length}</p>
+              <p className="text-xs text-muted-foreground mt-1">Total</p>
             </div>
 
-            <div className="border-t border-border pt-4 flex flex-wrap gap-4 items-center">
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => rejectAllMutation.mutate()}
-                disabled={anyLoading || pendingApps.length === 0}
-              >
-                {rejectAllMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
-                Reject All Pending ({pendingApps.length})
-              </Button>
+            <div className="bg-card border border-border rounded-xl p-4 text-center">
+              <p className="text-2xl font-black text-blue-600">
+                {actionableApplications.length}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">Actionable</p>
+            </div>
 
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground whitespace-nowrap">Accept top</label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={topN}
-                  onChange={(e) => setTopN(e.target.value)}
-                  className="w-16 h-8 text-center"
-                />
+            <div className="bg-card border border-border rounded-xl p-4 text-center">
+              <p className="text-2xl font-black text-primary">
+                {selectedIds.length}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">Selected</p>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-4 text-center">
+              <p className="text-2xl font-black text-green-600">
+                {applications.filter((app) => app.status === "accepted").length}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">Accepted</p>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-5 mb-6">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+              <div>
+                <h2 className="font-bold">
+                  {selectedJob?.title || "Selected Job"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {selectedJob?.company || ""}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
                 <Button
-                  size="sm"
-                  onClick={() => acceptTopMutation.mutate()}
-                  disabled={anyLoading || pendingApps.length === 0}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  type="button"
+                  variant="outline"
+                  onClick={selectAllActive}
+                  disabled={actionableApplications.length === 0}
                 >
-                  {acceptTopMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
-                  Accept Top N
+                  Select Active
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={clearSelection}
+                  disabled={selectedIds.length === 0}
+                >
+                  Clear
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => runBulkDecision("screening")}
+                  disabled={selectedIds.length === 0 || anyLoading}
+                >
+                  Screening
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => runBulkDecision("interview")}
+                  disabled={selectedIds.length === 0 || anyLoading}
+                >
+                  Interview
+                </Button>
+
+                <Button
+                  type="button"
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => runBulkDecision("accepted")}
+                  disabled={selectedIds.length === 0 || anyLoading}
+                >
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Accept
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => runBulkDecision("rejected")}
+                  disabled={selectedIds.length === 0 || anyLoading}
+                >
+                  <XCircle className="w-4 h-4 mr-1" />
+                  Reject
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => rejectAllMutation.mutate()}
+                  disabled={!selectedJobId || anyLoading || actionableApplications.length === 0}
+                >
+                  Reject All Active
                 </Button>
               </div>
             </div>
           </div>
 
-          {/* Applications List */}
-          {appsLoading ? (
-            <div className="flex items-center justify-center py-10">
+          {anyLoading && filteredApplications.length === 0 ? (
+            <div className="flex justify-center py-20">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
-          ) : applications.length === 0 ? (
-            <div className="bg-card border border-border rounded-xl p-8 text-center text-muted-foreground">
-              No applications for this job yet.
+          ) : filteredApplications.length === 0 ? (
+            <div className="bg-card border border-border rounded-xl p-10 text-center">
+              <p className="font-semibold">No candidates found</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Try changing the filters.
+              </p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {applications.map((app) => {
+            <div className="space-y-3">
+              {filteredApplications.map((app) => {
                 const selected = selectedIds.includes(app.id);
-                const isPending = app.status === "pending";
+                const locked = ["accepted", "rejected", "withdrawn"].includes(app.status);
+
                 return (
                   <div
                     key={app.id}
-                    onClick={() => isPending && toggleSelect(app.id)}
-                    className={`bg-card border rounded-xl p-4 flex items-center justify-between gap-4 transition ${
-                      isPending ? "cursor-pointer" : "opacity-60 cursor-default"
-                    } ${selected ? "border-primary ring-1 ring-primary/20" : "border-border hover:border-primary/30"}`}
+                    className={`bg-card border rounded-xl p-4 ${
+                      selected ? "border-primary" : "border-border"
+                    }`}
                   >
-                    <div className="flex items-center gap-3">
-                      {isPending && (
-                        <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center ${
-                          selected ? "bg-primary border-primary" : "border-muted-foreground"
-                        }`}>
-                          {selected && <span className="text-white text-[10px]">✓</span>}
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={locked}
+                          onChange={() => toggleSelect(app.id)}
+                          className="mt-1"
+                        />
+
+                        <div>
+                          <p className="font-semibold">{getCandidateName(app)}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {app.applicant_email || "No email"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Application ID: {app.id}
+                          </p>
                         </div>
-                      )}
-                      <div>
-                        <p className="font-medium text-sm">
-                          {app.applicant_name || app.applicant || `Application #${app.id}`}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(app.created_at).toLocaleDateString()}
-                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`px-3 py-1 rounded-full border text-xs font-semibold ${statusStyles[app.status] || statusStyles.pending}`}>
+                          {statusLabels[app.status] || app.status}
+                        </span>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            bulkMutation.mutate({
+                              ids: [app.id],
+                              decision: "interview",
+                            })
+                          }
+                          disabled={anyLoading || app.status === "interview"}
+                        >
+                          Interview
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() =>
+                            bulkMutation.mutate({
+                              ids: [app.id],
+                              decision: "accepted",
+                            })
+                          }
+                          disabled={anyLoading || app.status === "accepted"}
+                        >
+                          Accept
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() =>
+                            bulkMutation.mutate({
+                              ids: [app.id],
+                              decision: "rejected",
+                            })
+                          }
+                          disabled={anyLoading || app.status === "rejected"}
+                        >
+                          Reject
+                        </Button>
                       </div>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium shrink-0 ${
-                      app.status === "accepted" ? "bg-green-100 text-green-700" :
-                      app.status === "rejected" ? "bg-red-100 text-red-600" :
-                      "bg-secondary text-muted-foreground"
-                    }`}>
-                      {app.status}
-                    </span>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
-      )}
-
-      {!selectedJobId && (
-        <div className="bg-card border border-border rounded-xl p-10 text-center text-muted-foreground">
-          <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          Select a job above to manage its applications.
-        </div>
+        </>
       )}
     </div>
   );
