@@ -3,45 +3,81 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth } from "@/api/client";
 import {
-  LayoutDashboard, Briefcase, FileText, KanbanSquare, Sparkles,
-  PenLine, MessageSquare, Users, DollarSign, User, LogOut,
-  Building2, Target, Map, ScanSearch, BarChart3, TrendingUp,
-  UserSearch, GitCompare, Wrench, AlertTriangle, CheckSquare,
-  GitMerge, Database, Mail,
+  LayoutDashboard,
+  Briefcase,
+  FileText,
+  KanbanSquare,
+  Sparkles,
+  PenLine,
+  MessageSquare,
+  Users,
+  DollarSign,
+  User,
+  LogOut,
+  Building2,
+  Target,
+  Map,
+  ScanSearch,
+  BarChart3,
+  TrendingUp,
+  UserSearch,
+  GitCompare,
+  Wrench,
+  AlertTriangle,
+  CheckSquare,
+  GitMerge,
+  Database,
+  Mail,
 } from "lucide-react";
 
 const jobseekerNavItems = [
-  { icon: LayoutDashboard, label: "Dashboard",    path: "/" },
-  { icon: Briefcase,       label: "Job Board",    path: "/jobs" },
-  { icon: FileText,        label: "Applications", path: "/applications" },
-  { icon: KanbanSquare,    label: "Tracker",      path: "/tracker" },
-  { icon: Sparkles,        label: "Resume AI",    path: "/resume-ai" },
-  { icon: Target,          label: "Skill Gap",    path: "/skill-gap" },
-  { icon: ScanSearch,      label: "ATS Check",    path: "/ats-check" },
-  { icon: PenLine,         label: "Cover Letter", path: "/cover-letter" },
-  { icon: Users,           label: "Interview",    path: "/interview" },
-  { icon: DollarSign,      label: "Salary",       path: "/salary" },
-  { icon: Map,             label: "Career Plan",  path: "/career-roadmap" },
-  { icon: MessageSquare,   label: "AI Assistant", path: "/chatbot" },
-  { icon: Mail,            label: "Messages",     path: "/messages" },
-  { icon: User,            label: "Profile",      path: "/profile" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: Briefcase, label: "Job Board", path: "/jobs" },
+  { icon: FileText, label: "Applications", path: "/applications" },
+  { icon: KanbanSquare, label: "Tracker", path: "/tracker" },
+  { icon: Sparkles, label: "Resume AI", path: "/resume-ai" },
+  { icon: Target, label: "Skill Gap", path: "/skill-gap" },
+  { icon: ScanSearch, label: "ATS Check", path: "/ats-check" },
+  { icon: PenLine, label: "Cover Letter", path: "/cover-letter" },
+  { icon: Users, label: "Interview", path: "/interview" },
+  { icon: DollarSign, label: "Salary", path: "/salary" },
+  { icon: Map, label: "Career Plan", path: "/career-roadmap" },
+  { icon: MessageSquare, label: "AI Assistant", path: "/chatbot" },
+  { icon: Mail, label: "Messages", path: "/messages" },
+  { icon: User, label: "Profile", path: "/profile" },
 ];
 
 const recruiterNavItems = [
-  { icon: Building2,     label: "Dashboard",  path: "/recruiter" },
-  { icon: Briefcase,     label: "My Jobs",    path: "/jobs" },
-  { icon: BarChart3,     label: "Analytics",  path: "/recruiter/analytics" },
-  { icon: TrendingUp,    label: "Performance",path: "/recruiter/performance" },
-  { icon: UserSearch,    label: "Candidates", path: "/recruiter/candidates" },
-  { icon: GitCompare,    label: "Compare",    path: "/recruiter/compare" },
-  { icon: Wrench,        label: "Optimize",   path: "/recruiter/optimize" },
-  { icon: AlertTriangle, label: "Alerts",     path: "/recruiter/alerts" },
-  { icon: CheckSquare,   label: "Decisions",  path: "/recruiter/decisions" },
-  { icon: GitMerge,      label: "Matching",   path: "/recruiter/matching" },
-  { icon: Database,      label: "CRM",        path: "/recruiter/crm" },
-  { icon: Mail,          label: "Messages",   path: "/messages" },
-  { icon: User,          label: "Profile",    path: "/profile" },
+  { icon: Building2, label: "Dashboard", path: "/recruiter" },
+  { icon: Briefcase, label: "My Jobs", path: "/jobs" },
+  { icon: UserSearch, label: "Candidates", path: "/recruiter/candidates" },
+  { icon: BarChart3, label: "Analytics", path: "/recruiter/analytics" },
+  { icon: TrendingUp, label: "Performance", path: "/recruiter/performance" },
+  { icon: GitCompare, label: "Compare", path: "/recruiter/compare" },
+  { icon: CheckSquare, label: "Bulk Decisions", path: "/recruiter/decisions" },
+  { icon: Wrench, label: "Optimize", path: "/recruiter/optimize" },
+  { icon: AlertTriangle, label: "Alerts", path: "/recruiter/alerts" },
+  { icon: GitMerge, label: "Matching", path: "/recruiter/matching" },
+  { icon: Database, label: "CRM", path: "/recruiter/crm" },
+  { icon: Mail, label: "Messages", path: "/messages" },
+  { icon: User, label: "Profile", path: "/profile" },
 ];
+
+function isRouteActive(pathname, itemPath) {
+  if (itemPath === "/") {
+    return pathname === "/";
+  }
+
+  if (itemPath === "/recruiter") {
+    return pathname === "/recruiter";
+  }
+
+  if (itemPath === "/jobs") {
+    return pathname === "/jobs";
+  }
+
+  return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+}
 
 export default function AppSidebar() {
   const [expanded, setExpanded] = useState(false);
@@ -68,6 +104,7 @@ export default function AppSidebar() {
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
           <span className="text-primary-foreground font-bold text-sm">H</span>
         </div>
+
         <AnimatePresence>
           {expanded && (
             <motion.div
@@ -77,7 +114,9 @@ export default function AppSidebar() {
               className="ml-3"
             >
               <p className="font-semibold text-sm">HireFlow</p>
-              <p className="text-[10px] text-muted-foreground uppercase">Career Platform</p>
+              <p className="text-[10px] text-muted-foreground uppercase">
+                Career Platform
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -85,20 +124,21 @@ export default function AppSidebar() {
 
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path ||
-            (item.path !== "/" && location.pathname.startsWith(item.path) && item.path.includes("/recruiter/"));
+          const active = isRouteActive(location.pathname, item.path);
 
           return (
             <Link
               key={item.path}
               to={item.path}
               className={`flex items-center h-10 rounded-lg px-3 transition ${
-                isActive
+                active
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
+              title={item.label}
             >
               <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+
               <AnimatePresence>
                 {expanded && (
                   <motion.span
@@ -118,10 +158,12 @@ export default function AppSidebar() {
 
       <div className="p-2 border-t border-border">
         <button
+          type="button"
           onClick={handleLogout}
           className="flex items-center h-10 rounded-lg px-3 w-full text-muted-foreground hover:bg-secondary hover:text-red-500 transition"
         >
           <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
+
           <AnimatePresence>
             {expanded && (
               <motion.span

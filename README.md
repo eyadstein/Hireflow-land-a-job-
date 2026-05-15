@@ -27,6 +27,13 @@
 - [Contributing](#contributing)
 - [License](#license)
 
+### Current Development Status
+- **Core Backend APIs** — In progress (auth, jobs, applications, chat APIs functional)
+- **Frontend UI** — In progress (React components being built with Tailwind CSS and Radix UI)
+- **AI Features** — In development (CV generator, career assistant agent framework ready)
+- **Job Aggregation** — Partially implemented (external job fetching framework in place)
+- **Candidate Matching & CRM** — Architecture defined, integration in progress
+
 ---
 
 ## 📖 About
@@ -764,26 +771,41 @@ npm run dev
 
 ---
 
-## Known Issues and Improvements
+## Current State & Development Notes
 
-### Production readiness
-- `DEBUG=True` is enabled in `hireflow/settings.py`
-- `SECRET_KEY` is hardcoded
-- `ALLOWED_HOSTS` and CORS are wide open
-- Channels use in-memory layers instead of Redis
-- No production deployment or containerization docs
+### Recently Updated
+- Migration files for applications, jobs, and candidate notes (May 2025)
+- Multiple database backups indicate ongoing schema refinements and data migrations
+- Chat and messaging infrastructure with WebSocket routing in place
 
-### Functional gaps
-- Some AI tools require valid `GEMINI_KEY` and `GROQ_API_KEY` to operate
-- Chat UI is not fully real-time; it polls REST endpoints
-- Candidate matching and CRM features need integration testing
-- No API documentation like Swagger/OpenAPI
-- No automated tests in the current repository
+### In Active Development
+- **Frontend Pages** — React components for job search, applications, recruiter dashboard
+- **AI Integration** — CV generator and career assistant agent framework
+- **Job Matching** — Candidate-to-job matching algorithms and recommendation engine
+- **CRM Features** — Candidate pipeline management and engagement tracking
 
-### Code quality
-- `jobs/views.py` is large and should be split into smaller modules
-- Business logic is mixed into view logic instead of dedicated services
-- A few frontend pages rely on assumptions about job data shape
+### Areas Needing Attention
+- **Production Readiness**
+  - `DEBUG=True` is enabled in `hireflow/settings.py` — must be disabled for production
+  - `SECRET_KEY` is hardcoded in settings — move to environment variables
+  - `ALLOWED_HOSTS` and `CORS_ALLOW_ALL_ORIGINS` are wide open — restrict for production
+  - Channels use in-memory layers instead of Redis for WebSocket support
+  
+- **Code Quality**
+  - `jobs/views.py` is large and should be refactored into smaller modules
+  - Business logic mixed into views instead of dedicated service modules
+  - Frontend components need testing and storybook documentation
+  
+- **Testing & Documentation**
+  - No API documentation (Swagger/OpenAPI not yet implemented)
+  - Limited automated tests in the repository
+  - Need integration tests for AI endpoints and matching algorithms
+  
+- **Feature Gaps**
+  - AI tools require valid `GEMINI_KEY` and `GROQ_API_KEY` to operate fully
+  - Chat UI uses REST polling instead of real-time WebSocket
+  - Candidate matching and CRM features need integration testing with frontend
+  - No comprehensive error handling for third-party API failures
 
 ---
 
@@ -802,14 +824,16 @@ Primary endpoints are served from `/api/`.
 
 ---
 
-## Recommended Next Actions
+## Recommended Next Actions (Priority Order)
 
-1. Add environment-based settings and remove hardcoded secrets.
-2. Add API documentation with DRF schema tools.
-3. Add basic backend tests for auth, jobs, and applications.
-4. Refactor the largest Django views into service modules.
-5. Validate AI endpoints with actual API keys and error handling.
-6. Decide if WebSocket chat should be used or the websocket route removed.
+1. **Security Hardening** — Move `SECRET_KEY`, `ALLOWED_HOSTS`, and CORS settings to environment variables before any production deployment.
+2. **Frontend Completion** — Finalize React UI for job search, application tracking, and recruiter dashboard.
+3. **AI Feature Testing** — Validate CV generator and career assistant endpoints with real API keys and error handling.
+4. **API Documentation** — Add Swagger/OpenAPI schema documentation for all endpoints.
+5. **Code Refactoring** — Extract business logic from views into dedicated service modules (start with `jobs/views.py`).
+6. **Integration Testing** — Add tests for candidate matching, AI features, and external job aggregation.
+7. **WebSocket Chat** — Decide whether to implement real-time chat or remove WebSocket routing.
+8. **Deployment** — Add containerization (Docker) and deployment documentation.
 
 ---
 
