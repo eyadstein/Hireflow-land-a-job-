@@ -8,13 +8,13 @@ import {
   User,
   Sparkles,
   Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { auth } from "@/api/client";
 
 function isValidEmail(email) {
-  return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(
-    email.trim()
-  );
+  return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(email.trim());
 }
 
 export default function Login() {
@@ -24,6 +24,9 @@ export default function Login() {
   const [role, setRole] = useState("jobseeker");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -39,13 +42,19 @@ export default function Login() {
     }
 
     if (!isValidEmail(cleanEmail)) {
-      setError("Please enter a valid email address, for example name@example.com.");
+      setError("Please enter a valid email address, e.g. name@example.com.");
       return;
     }
 
-    if (mode === "register" && password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
+    if (mode === "register") {
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match. Please try again.");
+        return;
+      }
     }
 
     setError("");
@@ -61,7 +70,6 @@ export default function Login() {
       }
 
       const userRole = data?.user?.role || role || "jobseeker";
-
       localStorage.setItem("role", userRole);
 
       if (userRole === "recruiter" || userRole === "company") {
@@ -77,20 +85,20 @@ export default function Login() {
   };
 
   const handleKey = (e) => {
-    if (e.key === "Enter") {
-      handleSubmit();
-    }
+    if (e.key === "Enter") handleSubmit();
   };
 
   const switchMode = (nextMode) => {
     setMode(nextMode);
     setError("");
     setPassword("");
+    setConfirmPassword("");
   };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6 py-10">
       <div className="w-full max-w-6xl grid lg:grid-cols-2 bg-card border border-border rounded-3xl overflow-hidden shadow-2xl">
+        {/* Left panel */}
         <div className="p-10 lg:p-14 bg-foreground text-background flex flex-col justify-between">
           <div>
             <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-10">
@@ -115,12 +123,10 @@ export default function Login() {
               <p className="text-2xl font-bold">AI</p>
               <p className="text-background/60">Tools</p>
             </div>
-
             <div className="border border-white/10 rounded-2xl p-4">
               <p className="text-2xl font-bold">Pro</p>
               <p className="text-background/60">Tracking</p>
             </div>
-
             <div className="border border-white/10 rounded-2xl p-4">
               <p className="text-2xl font-bold">Jobs</p>
               <p className="text-background/60">Board</p>
@@ -128,6 +134,7 @@ export default function Login() {
           </div>
         </div>
 
+        {/* Right panel */}
         <div className="p-10 lg:p-14 flex items-center">
           <div className="w-full max-w-md mx-auto">
             <div className="mb-8">
@@ -183,35 +190,62 @@ export default function Login() {
             )}
 
             <div className="space-y-4">
+              {/* Email */}
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="email"
                   placeholder="Email"
                   value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    resetError();
-                  }}
+                  onChange={(e) => { setEmail(e.target.value); resetError(); }}
                   onKeyDown={handleKey}
                   className="login-input"
                 />
               </div>
 
+              {/* Password */}
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
-                  type="password"
-                  placeholder="Password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={mode === "register" ? "Password (min 8 characters)" : "Password"}
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    resetError();
-                  }}
+                  onChange={(e) => { setPassword(e.target.value); resetError(); }}
                   onKeyDown={handleKey}
-                  className="login-input"
+                  className="login-input pr-12"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
+
+              {/* Confirm password (register only) */}
+              {mode === "register" && (
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    placeholder="Confirm password"
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); resetError(); }}
+                    onKeyDown={handleKey}
+                    className="login-input pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              )}
 
               <button
                 type="button"

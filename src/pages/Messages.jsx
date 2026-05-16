@@ -5,24 +5,48 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { chat } from "@/api/client";
 
-const getCurrentUserId = () => {
+function getCurrentUserId() {
   try {
     const rawUser = localStorage.getItem("user");
-
     if (rawUser) {
       const user = JSON.parse(rawUser);
-      if (user?.id) return user.id;
+      if (user?.id != null) return Number(user.id);
     }
-
     const token = localStorage.getItem("access_token");
-
     if (!token) return null;
-
-    return JSON.parse(atob(token.split(".")[1])).user_id;
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.user_id ? Number(payload.user_id) : null;
   } catch {
     return null;
   }
-};
+}
+
+function normalizeUsers(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+}
+
+function normalizeMessages(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+}
+
+function isMine(msg, currentUserId) {
+  if (currentUserId == null) return false;
+  const senderId = msg.sender?.id ?? msg.sender;
+  return Number(senderId) === currentUserId;
+}
+
+function formatTime(ts) {
+  if (!ts) return "";
+  try {
+    return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
 
 export default function Messages() {
   const qc = useQueryClient();
@@ -35,7 +59,7 @@ export default function Messages() {
   const currentUserId = getCurrentUserId();
 
   const {
-    data: allUsers = [],
+    data: rawUsers,
     isLoading: loadingUsers,
     error: usersError,
   } = useQuery({
@@ -44,7 +68,7 @@ export default function Messages() {
   });
 
   const {
-    data: messages = [],
+    data: rawMessages,
     isLoading: loadingMsgs,
     error: messagesError,
   } = useQuery({
@@ -64,30 +88,36 @@ export default function Messages() {
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [rawMessages]);
 
-  const otherUsers = allUsers.filter((u) => {
-    const isNotMe = u.id !== currentUserId;
+  const allUsers = normalizeUsers(rawUsers);
+  const messages = normalizeMessages(rawMessages);
+
+  const filteredUsers = allUsers.filter((u) => {
     const label = `${u.username || ""} ${u.email || ""}`.toLowerCase();
-    const matchesSearch = search === "" || label.includes(search.toLowerCase());
-
-    return isNotMe && matchesSearch;
+    return search === "" || label.includes(search.toLowerCase());
   });
 
   const handleSend = () => {
     if (!selectedUser?.id || !text.trim()) return;
-
     sendMutation.mutate(text.trim());
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex overflow-hidden" style={{ height: "100vh" }}>
+      {/* User list */}
       <div className="w-64 border-r border-border flex flex-col shrink-0">
         <div className="p-4 border-b border-border">
           <p className="text-primary font-semibold tracking-[0.25em] text-xs uppercase mb-2">
             Messaging
           </p>
-
           <h2 className="text-lg font-bold flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
             Conversations
@@ -97,7 +127,6 @@ export default function Messages() {
         <div className="p-3 border-b border-border">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-
             <Input
               placeholder="Search users…"
               value={search}
@@ -116,12 +145,12 @@ export default function Messages() {
             <p className="text-xs text-red-600 text-center py-8 px-4">
               {usersError.message || "Failed to load users."}
             </p>
-          ) : otherUsers.length === 0 ? (
+          ) : filteredUsers.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-8 px-4">
               No users found.
             </p>
           ) : (
-            otherUsers.map((u) => (
+            filteredUsers.map((u) => (
               <button
                 key={u.id}
                 type="button"
@@ -133,12 +162,10 @@ export default function Messages() {
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <User className="w-4 h-4 text-primary" />
                 </div>
-
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">
                     {u.username || u.email}
                   </p>
-
                   <p className="text-xs text-muted-foreground capitalize">
                     {u.role || "user"}
                   </p>
@@ -149,14 +176,13 @@ export default function Messages() {
         </div>
       </div>
 
+      {/* Chat area */}
       <div className="flex-1 flex flex-col min-w-0">
         {!selectedUser ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-
               <p className="font-semibold text-lg">Select a conversation</p>
-
               <p className="text-sm text-muted-foreground mt-1">
                 Choose a user from the list to start messaging.
               </p>
@@ -164,22 +190,22 @@ export default function Messages() {
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-border shrink-0">
               <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                 <User className="w-4 h-4 text-primary" />
               </div>
-
               <div>
                 <p className="font-semibold">
                   {selectedUser.username || selectedUser.email}
                 </p>
-
                 <p className="text-xs text-muted-foreground capitalize">
                   {selectedUser.role || "user"}
                 </p>
               </div>
             </div>
 
+            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-3">
               {loadingMsgs ? (
                 <div className="flex justify-center py-10">
@@ -199,9 +225,8 @@ export default function Messages() {
                 </div>
               ) : (
                 messages.map((msg) => {
-                  const mine =
-                    msg.sender === currentUserId ||
-                    msg.sender?.id === currentUserId;
+                  const mine = isMine(msg, currentUserId);
+                  const body = msg.encrypted_text || msg.content || msg.message || "";
 
                   return (
                     <div
@@ -215,8 +240,7 @@ export default function Messages() {
                             : "bg-card border border-border rounded-bl-sm"
                         }`}
                       >
-                        <p>{msg.encrypted_text || msg.content || msg.message}</p>
-
+                        <p className="break-words">{body}</p>
                         {msg.timestamp && (
                           <p
                             className={`text-[10px] mt-1 ${
@@ -225,10 +249,7 @@ export default function Messages() {
                                 : "text-muted-foreground"
                             }`}
                           >
-                            {new Date(msg.timestamp).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {formatTime(msg.timestamp)}
                           </p>
                         )}
                       </div>
@@ -236,30 +257,26 @@ export default function Messages() {
                   );
                 })
               )}
-
               <div ref={endRef} />
             </div>
 
+            {/* Send error */}
             {sendMutation.error && (
-              <div className="px-4 py-2 text-sm text-red-600 border-t border-border">
+              <div className="px-4 py-2 text-sm text-red-600 border-t border-border shrink-0">
                 {sendMutation.error.message || "Failed to send message."}
               </div>
             )}
 
-            <div className="p-4 border-t border-border flex gap-3">
+            {/* Input */}
+            <div className="p-4 border-t border-border flex gap-3 shrink-0">
               <Input
                 placeholder={`Message ${selectedUser.username || selectedUser.email}…`}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
+                onKeyDown={handleKeyDown}
                 className="flex-1"
+                disabled={sendMutation.isPending}
               />
-
               <Button
                 type="button"
                 onClick={handleSend}

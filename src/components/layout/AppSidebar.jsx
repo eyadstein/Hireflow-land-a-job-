@@ -25,8 +25,6 @@ import {
   Wrench,
   AlertTriangle,
   CheckSquare,
-  GitMerge,
-  Database,
   Mail,
 } from "lucide-react";
 
@@ -57,8 +55,6 @@ const recruiterNavItems = [
   { icon: CheckSquare, label: "Bulk Decisions", path: "/recruiter/decisions" },
   { icon: Wrench, label: "Optimize", path: "/recruiter/optimize" },
   { icon: AlertTriangle, label: "Alerts", path: "/recruiter/alerts" },
-  { icon: GitMerge, label: "Matching", path: "/recruiter/matching" },
-  { icon: Database, label: "CRM", path: "/recruiter/crm" },
   { icon: Mail, label: "Messages", path: "/messages" },
   { icon: User, label: "Profile", path: "/profile" },
 ];

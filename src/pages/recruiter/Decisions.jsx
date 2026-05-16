@@ -383,8 +383,9 @@ export default function Decisions() {
                   variant="outline"
                   onClick={() => runBulkDecision("screening")}
                   disabled={selectedIds.length === 0 || anyLoading}
+                  title="Move selected to Screening"
                 >
-                  Screening
+                  → Screening
                 </Button>
 
                 <Button
@@ -392,8 +393,9 @@ export default function Decisions() {
                   variant="outline"
                   onClick={() => runBulkDecision("interview")}
                   disabled={selectedIds.length === 0 || anyLoading}
+                  title="Move selected to Interview"
                 >
-                  Interview
+                  → Interview
                 </Button>
 
                 <Button
@@ -482,10 +484,18 @@ export default function Decisions() {
                           size="sm"
                           variant="outline"
                           onClick={() =>
-                            bulkMutation.mutate({
-                              ids: [app.id],
-                              decision: "interview",
-                            })
+                            bulkMutation.mutate({ ids: [app.id], decision: "screening" })
+                          }
+                          disabled={anyLoading || app.status === "screening"}
+                        >
+                          Screening
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            bulkMutation.mutate({ ids: [app.id], decision: "interview" })
                           }
                           disabled={anyLoading || app.status === "interview"}
                         >
@@ -496,10 +506,7 @@ export default function Decisions() {
                           size="sm"
                           className="bg-green-600 hover:bg-green-700"
                           onClick={() =>
-                            bulkMutation.mutate({
-                              ids: [app.id],
-                              decision: "accepted",
-                            })
+                            bulkMutation.mutate({ ids: [app.id], decision: "accepted" })
                           }
                           disabled={anyLoading || app.status === "accepted"}
                         >
@@ -510,10 +517,7 @@ export default function Decisions() {
                           size="sm"
                           variant="destructive"
                           onClick={() =>
-                            bulkMutation.mutate({
-                              ids: [app.id],
-                              decision: "rejected",
-                            })
+                            bulkMutation.mutate({ ids: [app.id], decision: "rejected" })
                           }
                           disabled={anyLoading || app.status === "rejected"}
                         >

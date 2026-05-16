@@ -72,37 +72,83 @@ class ApplyView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         job_id = request.data.get("job") or request.data.get("job_id")
 
-        if not job_id:
+        # ── Internal job application ──────────────────────────────────
+        if job_id:
+            from jobs.models import Job
+
+            job = get_object_or_404(Job, id=job_id)
+
+            existing = Application.objects.filter(
+                applicant=request.user,
+                job=job,
+            ).first()
+
+            if existing:
+                return Response(
+                    {
+                        "detail": "You have already applied to this job.",
+                        "application": ApplicationSerializer(existing).data,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            application = Application.objects.create(
+                applicant=request.user,
+                job=job,
+                job_title=job.title,
+                company=job.company,
+                status="pending",
+                applied_date=timezone.now().date(),
+            )
+
             return Response(
-                {"detail": "job is required."},
+                ApplicationSerializer(application).data,
+                status=status.HTTP_201_CREATED,
+            )
+
+        # ── External job application (no internal job FK) ─────────────
+        job_title = (request.data.get("job_title") or "").strip()
+        company = (request.data.get("company") or "").strip()
+
+        if not job_title or not company:
+            return Response(
+                {"detail": "job_title and company are required for external job applications."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        from jobs.models import Job
-
-        job = get_object_or_404(Job, id=job_id)
-
-        existing = Application.objects.filter(
+        # Prevent duplicate external applications for the same title+company
+        existing_external = Application.objects.filter(
             applicant=request.user,
-            job=job,
+            job__isnull=True,
+            job_title__iexact=job_title,
+            company__iexact=company,
         ).first()
 
-        if existing:
+        if existing_external:
             return Response(
                 {
-                    "detail": "You have already applied to this job.",
-                    "application": ApplicationSerializer(existing).data,
+                    "detail": "You have already saved an application for this position.",
+                    "application": ApplicationSerializer(existing_external).data,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        notes = (request.data.get("notes") or "").strip()
+        applied_date_str = request.data.get("applied_date")
+        try:
+            from datetime import date
+            applied_date = date.fromisoformat(applied_date_str) if applied_date_str else timezone.now().date()
+        except (ValueError, TypeError):
+            applied_date = timezone.now().date()
+
         application = Application.objects.create(
             applicant=request.user,
-            job=job,
-            job_title=job.title,
-            company=job.company,
-            status="pending",
-            applied_date=timezone.now().date(),
+            job=None,
+            job_title=job_title,
+            company=company,
+            status="applied",
+            applied_date=applied_date,
+            notes=notes,
         )
 
         return Response(
@@ -199,6 +245,17 @@ class CandidateProfileView(APIView):
             "email": candidate.email,
             "first_name": candidate.first_name or "",
             "last_name": candidate.last_name or "",
+            # Profile fields saved by the candidate
+            "bio": getattr(candidate, "bio", "") or "",
+            "skills": getattr(candidate, "skills", "") or "",
+            "experience_level": getattr(candidate, "experience_level", "") or "",
+            "desired_roles": getattr(candidate, "desired_roles", "") or "",
+            "city": getattr(candidate, "city", "") or "",
+            "country": getattr(candidate, "country", "") or "",
+            "linkedin": getattr(candidate, "linkedin", "") or "",
+            "portfolio": getattr(candidate, "portfolio", "") or "",
+            "prefers_remote": getattr(candidate, "prefers_remote", False),
+            # Application stats
             "total_applications": apps.count(),
             "pending": apps.filter(status="pending").count(),
             "applied": apps.filter(status="applied").count(),
@@ -335,10 +392,11 @@ class NoteDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-def build_candidate_comparison_profile(candidate, recruiter_job_ids):
+def build_candidate_comparison_profile(candidate, recruiter_job_ids, specific_job_ids=None):
+    job_filter = specific_job_ids if specific_job_ids is not None else recruiter_job_ids
     apps = (
         Application.objects
-        .filter(applicant=candidate, job_id__in=recruiter_job_ids)
+        .filter(applicant=candidate, job_id__in=job_filter)
         .select_related("job", "applicant")
     )
 
@@ -352,24 +410,15 @@ def build_candidate_comparison_profile(candidate, recruiter_job_ids):
     rejected = apps.filter(status="rejected").count()
     withdrawn = apps.filter(status="withdrawn").count()
 
-    score = 40
-    score += accepted * 20
-    score += offer * 12
-    score += interview * 8
-    score += screening * 5
-    score += total * 5
-    score -= rejected * 7
-    score -= withdrawn * 4
-    score = max(0, min(score, 100))
-
-    if score >= 80:
-        tier = "star"
-    elif score >= 60:
-        tier = "strong"
-    elif score >= 40:
-        tier = "average"
-    else:
-        tier = "below_average"
+    # Raw score: purely based on hiring-pipeline progress (no arbitrary base)
+    raw_score = (
+        accepted * 30
+        + offer * 20
+        + interview * 15
+        + screening * 10
+        - rejected * 8
+        - withdrawn * 4
+    )
 
     return {
         "user_id": candidate.id,
@@ -377,8 +426,9 @@ def build_candidate_comparison_profile(candidate, recruiter_job_ids):
         "email": candidate.email,
         "first_name": candidate.first_name or "",
         "last_name": candidate.last_name or "",
-        "score": score,
-        "tier": tier,
+        "raw_score": raw_score,
+        "score": 0,        # filled in after normalization
+        "tier": "",        # filled in after normalization
         "stats": {
             "total_applications": total,
             "pending": pending,
@@ -394,6 +444,38 @@ def build_candidate_comparison_profile(candidate, recruiter_job_ids):
     }
 
 
+def normalize_and_tier(profiles):
+    """Normalize raw scores relative to the group and assign tiers."""
+    if not profiles:
+        return profiles
+
+    scores = [p["raw_score"] for p in profiles]
+    min_score = min(scores)
+    max_score = max(scores)
+    score_range = max_score - min_score
+
+    for p in profiles:
+        if score_range == 0:
+            normalized = 100 if max_score > 0 else 50
+        else:
+            normalized = round(
+                ((p["raw_score"] - min_score) / score_range) * 100
+            )
+        p["score"] = normalized
+        del p["raw_score"]
+
+        if normalized >= 80:
+            p["tier"] = "star"
+        elif normalized >= 55:
+            p["tier"] = "strong"
+        elif normalized >= 30:
+            p["tier"] = "average"
+        else:
+            p["tier"] = "below_average"
+
+    return profiles
+
+
 class CompareCandidatesView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -403,16 +485,18 @@ class CompareCandidatesView(APIView):
 
         my_job_ids = list(get_recruiter_job_ids(request.user))
 
+        specific_job_ids = None
         if application_ids:
             selected_apps = Application.objects.filter(
                 id__in=application_ids,
                 job_id__in=my_job_ids,
             )
-
             candidate_ids = list(
-                selected_apps
-                .values_list("applicant_id", flat=True)
-                .distinct()
+                selected_apps.values_list("applicant_id", flat=True).distinct()
+            )
+            # Scope comparison to the jobs from the selected applications only
+            specific_job_ids = list(
+                selected_apps.values_list("job_id", flat=True).distinct()
             )
 
         if not candidate_ids or len(candidate_ids) < 2:
@@ -427,14 +511,27 @@ class CompareCandidatesView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Exclude the recruiter themselves from the comparison
+        candidate_ids = [cid for cid in candidate_ids if cid != request.user.id]
+
+        if len(candidate_ids) < 2:
+            return Response(
+                {"error": "Select at least two valid candidates to compare."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         candidates = User.objects.filter(id__in=candidate_ids)
 
         profiles = [
-            build_candidate_comparison_profile(candidate, my_job_ids)
+            build_candidate_comparison_profile(candidate, my_job_ids, specific_job_ids)
             for candidate in candidates
         ]
 
-        profiles.sort(key=lambda item: item["score"], reverse=True)
+        # Sort by raw_score before normalization
+        profiles.sort(key=lambda item: item["raw_score"], reverse=True)
+
+        # Normalize scores so the best candidate = 100, worst = 0 (relative comparison)
+        profiles = normalize_and_tier(profiles)
 
         for index, profile in enumerate(profiles):
             profile["rank"] = index + 1

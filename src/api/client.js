@@ -187,6 +187,11 @@ export const auth = {
     window.location.href = "/login";
   },
 
+  deleteAccount: async () => {
+    await request("DELETE", "/users/delete/");
+    clearAuthData();
+  },
+
   isLoggedIn: () => !!getToken(),
 };
 

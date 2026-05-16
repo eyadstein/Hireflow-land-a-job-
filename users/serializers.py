@@ -11,15 +11,25 @@ STRICT_EMAIL_REGEX = re.compile(
 )
 
 
+def _ensure_url_scheme(value):
+    """Prepend https:// if value looks like a URL but has no scheme."""
+    if not value:
+        return ""
+    value = value.strip()
+    if value and not value.startswith(("http://", "https://")):
+        value = "https://" + value
+    return value
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True,
-        min_length=6,
+        min_length=8,
         validators=[validate_password],
         error_messages={
             "required": "Password is required.",
             "blank": "Password is required.",
-            "min_length": "Password must be at least 6 characters.",
+            "min_length": "Password must be at least 8 characters.",
         },
     )
 
@@ -107,6 +117,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
 
+    # Override to CharField so we can accept partial URLs (e.g. "linkedin.com/in/user")
+    linkedin = serializers.CharField(allow_blank=True, default="", required=False)
+    portfolio = serializers.CharField(allow_blank=True, default="", required=False)
+
     class Meta:
         model = User
         fields = [
@@ -145,10 +159,34 @@ class UserSerializer(serializers.ModelSerializer):
         return full_name or obj.username or obj.email
 
     def validate_linkedin(self, value):
-        return value.strip() if value else ""
+        return _ensure_url_scheme(value)
 
     def validate_portfolio(self, value):
-        return value.strip() if value else ""
+        return _ensure_url_scheme(value)
+
+    def validate_experience_level(self, value):
+        if not value:
+            return ""
+        # Normalize to lowercase to match model choices
+        normalized = value.strip().lower()
+        allowed = [choice[0] for choice in User.EXPERIENCE_LEVEL_CHOICES if choice[0]]
+        if normalized not in allowed:
+            # Accept common display labels gracefully
+            label_map = {
+                "junior": "junior",
+                "mid": "mid",
+                "mid-level": "mid",
+                "middle": "mid",
+                "senior": "senior",
+                "student": "student",
+                "intern": "intern",
+                "internship": "intern",
+                "lead": "senior",
+                "executive": "senior",
+                "manager": "senior",
+            }
+            normalized = label_map.get(normalized, "")
+        return normalized
 
     def update(self, instance, validated_data):
         allowed_fields = [
