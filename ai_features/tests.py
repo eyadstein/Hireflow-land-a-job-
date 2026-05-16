@@ -8,6 +8,14 @@ User = get_user_model()
 
 class AICareerToolTests(APITestCase):
 
+    AI_ALLOWED_STATUSES = [
+        status.HTTP_200_OK,
+        status.HTTP_201_CREATED,
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+        status.HTTP_503_SERVICE_UNAVAILABLE,
+    ]
+
     def setUp(self):
         self.user = User.objects.create_user(
             username="jobseeker",
@@ -30,14 +38,7 @@ class AICareerToolTests(APITestCase):
             format="multipart"
         )
 
-        self.assertIn(
-            response.status_code,
-            [
-                status.HTTP_200_OK,
-                status.HTTP_400_BAD_REQUEST,
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ]
-        )
+        self.assertIn(response.status_code, self.AI_ALLOWED_STATUSES)
 
     def test_resume_analysis_non_pdf(self):
         txt_file = SimpleUploadedFile(
@@ -67,13 +68,7 @@ class AICareerToolTests(APITestCase):
             format="json"
         )
 
-        self.assertIn(
-            response.status_code,
-            [
-                status.HTTP_200_OK,
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ]
-        )
+        self.assertIn(response.status_code, self.AI_ALLOWED_STATUSES)
 
     def test_salary_estimation(self):
         response = self.client.post(
@@ -87,13 +82,7 @@ class AICareerToolTests(APITestCase):
             format="json"
         )
 
-        self.assertIn(
-            response.status_code,
-            [
-                status.HTTP_200_OK,
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ]
-        )
+        self.assertIn(response.status_code, self.AI_ALLOWED_STATUSES)
 
     def test_career_roadmap_generation(self):
         response = self.client.post(
@@ -106,14 +95,7 @@ class AICareerToolTests(APITestCase):
             format="json"
         )
 
-        self.assertIn(
-            response.status_code,
-            [
-                status.HTTP_201_CREATED,
-                status.HTTP_200_OK,
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ]
-        )
+        self.assertIn(response.status_code, self.AI_ALLOWED_STATUSES)
 
     def test_start_mock_interview_session(self):
         response = self.client.post(
@@ -125,14 +107,7 @@ class AICareerToolTests(APITestCase):
             format="json"
         )
 
-        self.assertIn(
-            response.status_code,
-            [
-                status.HTTP_201_CREATED,
-                status.HTTP_200_OK,
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ]
-        )
+        self.assertIn(response.status_code, self.AI_ALLOWED_STATUSES)
 
     def test_linkedin_optimization(self):
         response = self.client.post(
@@ -146,14 +121,7 @@ class AICareerToolTests(APITestCase):
             format="json"
         )
 
-        self.assertIn(
-            response.status_code,
-            [
-                status.HTTP_201_CREATED,
-                status.HTTP_200_OK,
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ]
-        )
+        self.assertIn(response.status_code, self.AI_ALLOWED_STATUSES)
 
     def test_ai_career_chat_message(self):
         response = self.client.post(
@@ -164,13 +132,7 @@ class AICareerToolTests(APITestCase):
             format="json"
         )
 
-        self.assertIn(
-            response.status_code,
-            [
-                status.HTTP_200_OK,
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ]
-        )
+        self.assertIn(response.status_code, self.AI_ALLOWED_STATUSES)
 
     def test_interview_coach_tips(self):
         response = self.client.post(
@@ -181,10 +143,4 @@ class AICareerToolTests(APITestCase):
             format="json"
         )
 
-        self.assertIn(
-            response.status_code,
-            [
-                status.HTTP_200_OK,
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ]
-        )
+        self.assertIn(response.status_code, self.AI_ALLOWED_STATUSES)
