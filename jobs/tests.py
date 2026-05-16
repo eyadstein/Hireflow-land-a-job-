@@ -68,3 +68,16 @@ class JobTests(APITestCase):
         response = self.client.post("/api/jobs/", data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+def test_unauthenticated_user_cannot_create_job(self):
+
+    data = {
+        "title": "Backend Developer",
+        "company": "HireFlow",
+        "description": "Django Developer",
+        "location": "Cairo"
+    }
+
+    response = self.client.post("/api/jobs/", data, format="json")
+
+    self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
