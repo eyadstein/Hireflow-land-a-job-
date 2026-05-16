@@ -58,3 +58,19 @@ def test_duplicate_application(self):
     )
 
     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+def test_view_own_applications(self):
+    self.client.force_authenticate(user=self.jobseeker)
+
+    self.client.post(
+        "/api/applications/apply/",
+        {"job_id": self.job.id},
+        format="json"
+    )
+
+    response = self.client.get("/api/applications/mine/")
+
+    self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    data = response.data.get("results", response.data) if isinstance(response.data, dict) else response.data
+    self.assertGreaterEqual(len(data), 1)
