@@ -1,7 +1,10 @@
 from rest_framework import generics, permissions
 from django.db.models import Q
+
+from applications.views import User
 from .models import Message
 from .serializers import MessageSerializer
+from rest_framework.exceptions import NotFound
 
 class MessageListView(generics.ListCreateAPIView):
     serializer_class = MessageSerializer
@@ -18,5 +21,10 @@ class MessageListView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        recipient = User.objects.get(id=self.kwargs['user_id'])
+
+        try:
+            recipient = User.objects.get(id=self.kwargs['user_id'])
+        except User.DoesNotExist:
+            raise NotFound("Recipient not found.")
+
         serializer.save(sender=self.request.user, recipient=recipient)
