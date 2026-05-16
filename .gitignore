@@ -5,6 +5,8 @@ __pycache__/
 node_modules/
 dist/
 db.sqlite3
+.venv/
 venv/
 *.egg-info/
 .DS_Store
+*.sqlite3
