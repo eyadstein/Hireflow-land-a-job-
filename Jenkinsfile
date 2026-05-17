@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        PORT = "${env.PORT ?: '8000'}"
-    }
-
     stages {
         stage('Checkout') {
             steps {
@@ -14,48 +10,38 @@ pipeline {
 
         stage('Build Frontend') {
             steps {
-                sh 'npm ci'
-                sh 'npm run build'
+                bat 'npm ci'
+                bat 'npm run build'
             }
         }
 
         stage('Install Backend') {
             steps {
-                sh 'pip install -r requirements.txt'
+                bat 'pip install -r requirements.txt'
             }
         }
 
         stage('Migrate') {
             steps {
-                sh 'python manage.py migrate --noinput'
+                bat 'python manage.py migrate --noinput'
             }
         }
 
         stage('Deploy') {
             steps {
-                sh '''
-                    # Kill any existing daphne process on this port
-                    fuser -k ${PORT}/tcp || true
-
-                    # Start daphne in background, redirect logs
-                    nohup daphne -b 0.0.0.0 -p ${PORT} hireflow.asgi:application \
-                        > daphne.log 2>&1 &
-
-                    echo "App started on port ${PORT}"
-                    sleep 3
-                    curl -sf http://localhost:${PORT}/api/ || echo "Health check failed"
-                '''
+                bat 'powershell -Command "Get-Process -Name daphne -ErrorAction SilentlyContinue | Stop-Process -Force"'
+                bat 'start "HireflowApp" /B daphne -b 0.0.0.0 -p 8000 hireflow.asgi:application > daphne.log 2>&1'
+                bat 'powershell -Command "Start-Sleep 3; Invoke-WebRequest -Uri http://localhost:8000/api/ -UseBasicParsing | Select-Object StatusCode"'
             }
         }
     }
 
     post {
         success {
-            echo "Hireflow is running on port ${PORT}"
+            echo 'Hireflow is running on http://localhost:8000'
         }
         failure {
-            sh 'tail -n 30 daphne.log || true'
-            echo 'Deployment failed. Check logs above.'
+            bat 'type daphne.log 2>nul || echo No log file yet'
         }
     }
 }
