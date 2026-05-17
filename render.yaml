@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: hireflow
+    runtime: docker
+    plan: free
+    envVars:
+      - key: VITE_GROQ_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: JSEARCH_KEY
+        sync: false
+      - key: ADZUNA_APP_ID
+        sync: false
+      - key: ADZUNA_APP_KEY
+        sync: false
