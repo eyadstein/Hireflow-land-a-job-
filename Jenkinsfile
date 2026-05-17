@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'hireflow'
-        COMPOSE_FILE = 'docker-compose.yml'
+        PORT = "${env.PORT ?: '8000'}"
     }
 
     stages {
@@ -13,48 +12,50 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build Frontend') {
             steps {
-                sh 'docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .'
-                sh 'docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest'
+                sh 'npm ci'
+                sh 'npm run build'
             }
         }
 
-        stage('Test') {
+        stage('Install Backend') {
             steps {
-                sh '''
-                    docker run --rm \
-                        -e DB_NAME="" \
-                        ${IMAGE_NAME}:${BUILD_NUMBER} \
-                        python manage.py test --verbosity=2
-                '''
+                sh 'pip install -r requirements.txt'
+            }
+        }
+
+        stage('Migrate') {
+            steps {
+                sh 'python manage.py migrate --noinput'
             }
         }
 
         stage('Deploy') {
             steps {
-                withEnv([
-                    "DB_NAME=${env.DB_NAME ?: 'hireflow'}",
-                    "DB_USER=${env.DB_USER ?: 'postgres'}",
-                    "DB_PASSWORD=${env.DB_PASSWORD ?: 'postgres'}"
-                ]) {
-                    sh 'docker compose -f ${COMPOSE_FILE} down --remove-orphans'
-                    sh 'docker compose -f ${COMPOSE_FILE} up -d --build'
-                }
+                sh '''
+                    # Kill any existing daphne process on this port
+                    fuser -k ${PORT}/tcp || true
+
+                    # Start daphne in background, redirect logs
+                    nohup daphne -b 0.0.0.0 -p ${PORT} hireflow.asgi:application \
+                        > daphne.log 2>&1 &
+
+                    echo "App started on port ${PORT}"
+                    sleep 3
+                    curl -sf http://localhost:${PORT}/api/ || echo "Health check failed"
+                '''
             }
         }
     }
 
     post {
         success {
-            echo 'Hireflow deployed successfully.'
+            echo "Hireflow is running on port ${PORT}"
         }
         failure {
-            sh 'docker compose -f ${COMPOSE_FILE} logs --tail=50'
+            sh 'tail -n 30 daphne.log || true'
             echo 'Deployment failed. Check logs above.'
-        }
-        always {
-            sh 'docker image prune -f'
         }
     }
 }
