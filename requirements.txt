@@ -68,4 +68,5 @@ scikit-learn==1.8.0
 pdfplumber==0.11.9
 python-docx==1.1.2
 reportlab==4.4.1
+whitenoise==6.9.0
 
